@@ -1,4 +1,4 @@
-// lib/widgets/report_card.dart
+// lib/widgets/reportcard.dart
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
 
@@ -44,15 +44,15 @@ class ReportCard extends StatelessWidget {
     }
 
     return Container(
-      width: double.infinity,
+      width: double.infinity, // Full width
       margin: EdgeInsets.symmetric(
-        vertical: screenWidth * 0.015,
-        horizontal: screenWidth * 0.02,
+        vertical: screenWidth * 0.01,
+        horizontal: screenWidth * 0.005, // Minimal horizontal margin
       ),
       padding: EdgeInsets.all(screenWidth * 0.04),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16), // Slightly more rounded
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -68,17 +68,19 @@ class ReportCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                timeDate,
-                style: AppFonts.regular14().copyWith(
-                  fontSize:
-                      screenWidth *
-                      (isLargeScreen
-                          ? 0.012
-                          : isTablet
-                          ? 0.02
-                          : 0.035),
-                  color: AppColors.textSecondary,
+              Flexible(
+                child: Text(
+                  timeDate,
+                  style: AppFonts.regular14().copyWith(
+                    fontSize:
+                        screenWidth *
+                        (isLargeScreen
+                            ? 0.012
+                            : isTablet
+                            ? 0.02
+                            : 0.035),
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               Container(
@@ -155,6 +157,8 @@ class ReportCard extends StatelessWidget {
                       : 0.04),
               color: AppColors.textPrimary,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
 
           SizedBox(height: screenWidth * 0.025),
@@ -177,17 +181,20 @@ class ReportCard extends StatelessWidget {
                         : null,
               ),
               SizedBox(width: screenWidth * 0.025),
-              Text(
-                reporter,
-                style: AppFonts.regular14().copyWith(
-                  fontSize:
-                      screenWidth *
-                      (isLargeScreen
-                          ? 0.012
-                          : isTablet
-                          ? 0.02
-                          : 0.032),
-                  color: AppColors.textSecondary,
+              Flexible(
+                child: Text(
+                  reporter,
+                  style: AppFonts.regular14().copyWith(
+                    fontSize:
+                        screenWidth *
+                        (isLargeScreen
+                            ? 0.012
+                            : isTablet
+                            ? 0.02
+                            : 0.032),
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

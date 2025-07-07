@@ -1,7 +1,7 @@
 // lib/main_app.dart
 import 'package:flutter/material.dart';
-import 'package:letmegoo/home_page.dart';
-import 'package:letmegoo/profile_page.dart';
+import 'package:letmegoo/screens/home_page.dart';
+import 'package:letmegoo/screens/profile_page.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({Key? key}) : super(key: key);

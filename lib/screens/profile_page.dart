@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/my_vehicles_screen.dart';
-import '../widgets/profileoption.dart';
-import '../widgets/usertile.dart';
-import '../widgets/custom_bottom_nav.dart';
+import '../../widgets/profileoption.dart';
+import '../../widgets/usertile.dart';
+import '../../widgets/custom_bottom_nav.dart';
 
 class ProfilePage extends StatelessWidget {
   final Function(int) onNavigate;
@@ -49,8 +49,6 @@ class ProfilePage extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      // Back Button - Only show if coming from another screen
-                      // For now, we'll hide it since this is part of bottom nav
                       SizedBox(width: screenWidth * 0.02),
                       Expanded(
                         child: Center(
