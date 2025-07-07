@@ -89,7 +89,7 @@ class Editvehicledialog extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: SizedBox(
-                height: 44,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: onDelete,
                   style: ElevatedButton.styleFrom(
@@ -99,7 +99,8 @@ class Editvehicledialog extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    "Delete Vehicle",
+                    "Edit",
+                    style: TextStyle(color: Colors.white), // 👈 Make text white
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

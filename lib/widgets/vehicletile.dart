@@ -78,13 +78,6 @@ class Vehicletile extends StatelessWidget {
             ],
           ),
         ),
-        const Divider(
-          color: AppColors.textSecondary,
-          thickness: 0.8,
-          height: 16,
-          indent: 10,
-          endIndent: 10,
-        ),
       ],
     );
   }
