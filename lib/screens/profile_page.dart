@@ -84,7 +84,11 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           // Enhanced User Profile Card
                           Container(
-                            decoration: BoxDecoration(
+       
+       
+       
+       
+                           decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
