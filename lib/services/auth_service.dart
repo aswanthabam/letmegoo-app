@@ -46,6 +46,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> userData = json.decode(response.body);
+        
         return userData;
       } else if (response.statusCode == 401) {
         // Token expired or invalid, sign out user
