@@ -1,4 +1,4 @@
-// lib/services/auth_service.dart (Enhanced version)
+// lib/services/auth_service.dart (Optimized version)
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -10,127 +10,189 @@ import 'package:letmegoo/models/vehicle_type.dart';
 class AuthService {
   static const String baseUrl = 'https://dev-api.letmegoo.com/api';
   static const Duration timeoutDuration = Duration(seconds: 10);
+  static const Duration connectivityTimeout = Duration(seconds: 5);
 
-  static Future<Map<String, dynamic>?> authenticateUser() async {
+  // Singleton HTTP client for connection reuse
+  static final http.Client _httpClient = http.Client();
+
+  // Cache for vehicle types to avoid repeated API calls
+  static List<VehicleType>? _vehicleTypesCache;
+  static DateTime? _cacheTimestamp;
+  static const Duration cacheValidity = Duration(hours: 1);
+
+  /// Checks internet connectivity efficiently
+  static Future<bool> _hasInternetConnection() async {
     try {
-      // Check internet connectivity
-      final result = await InternetAddress.lookup('google.com');
-      if (result.isEmpty || result[0].rawAddress.isEmpty) {
-        throw Exception('No internet connection');
-      }
-
-      // Get current Firebase user
-      final User? firebaseUser = FirebaseAuth.instance.currentUser;
-
-      if (firebaseUser == null) {
-        throw Exception('No Firebase user found');
-      }
-
-      // Get Firebase JWT token
-      final String? idToken = await firebaseUser.getIdToken(
-        true,
-      ); // Force refresh
-      print(idToken);
-      if (idToken == null) {
-        throw Exception('Failed to get ID token');
-      }
-
-      // Make API call with timeout
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/user/authenticate'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $idToken',
-            },
-          )
-          .timeout(timeoutDuration);
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> userData = json.decode(response.body);
-
-        return userData;
-      } else if (response.statusCode == 401) {
-        // Token expired or invalid, sign out user
-        await FirebaseAuth.instance.signOut();
-        throw Exception('Authentication expired');
-      } else {
-        throw Exception('API error: ${response.statusCode}');
-      }
-    } on SocketException {
-      throw Exception('No internet connection');
-    } on TimeoutException {
-      throw Exception('Request timeout');
-    } catch (e) {
-      print('Authentication error: $e');
-      rethrow;
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(connectivityTimeout);
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
     }
   }
 
-  // lib/services/auth_service.dart (Update the updateUserProfile method)
+  /// Gets authenticated headers with Firebase JWT token
+  static Future<Map<String, String>> _getAuthHeaders({
+    String contentType = 'application/json',
+  }) async {
+    final User? firebaseUser = FirebaseAuth.instance.currentUser;
+
+    if (firebaseUser == null) {
+      throw AuthException('No Firebase user found');
+    }
+
+    final String? idToken = await firebaseUser.getIdToken(true);
+
+    if (idToken == null) {
+      throw AuthException('Failed to get ID token');
+    }
+
+    return {
+      'Content-Type': contentType,
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $idToken',
+    };
+  }
+
+  /// Handles common HTTP response errors
+  static void _handleHttpError(http.Response response) {
+    switch (response.statusCode) {
+      case 401:
+        FirebaseAuth.instance.signOut();
+        throw AuthException('Authentication expired');
+      case 400:
+        throw ValidationException('Invalid request: ${response.body}');
+      case 403:
+        throw AuthException('Access denied');
+      case 404:
+        throw ApiException('Resource not found');
+      case 500:
+        throw ApiException('Server error');
+      default:
+        throw ApiException(
+          'API error: ${response.statusCode} - ${response.body}',
+        );
+    }
+  }
+
+  /// Authenticates user with enhanced error handling
+  static Future<Map<String, dynamic>?> authenticateUser() async {
+    try {
+      // Check connectivity first
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders();
+
+      final response = await _httpClient
+          .post(Uri.parse('$baseUrl/user/authenticate'), headers: headers)
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        _handleHttpError(response);
+        return null;
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } on FormatException {
+      throw ApiException('Invalid response format');
+    } catch (e) {
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException) {
+        rethrow;
+      }
+      throw ApiException('Authentication failed: $e');
+    }
+  }
+
+  /// Updates user profile with validation
   static Future<Map<String, dynamic>?> updateUserProfile({
     required String fullname,
     required String email,
     required String phoneNumber,
-    String? companyName, // Make optional
+    String? companyName,
   }) async {
+    // Input validation
+    if (fullname.trim().isEmpty) {
+      throw ValidationException('Full name cannot be empty');
+    }
+    if (!_isValidEmail(email)) {
+      throw ValidationException('Invalid email format');
+    }
+    if (!_isValidPhoneNumber(phoneNumber)) {
+      throw ValidationException('Invalid phone number format');
+    }
+
     try {
-      // Get current Firebase user
-      final User? firebaseUser = FirebaseAuth.instance.currentUser;
-
-      if (firebaseUser == null) {
-        throw Exception('No Firebase user found');
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
       }
 
-      // Get Firebase JWT token
-      final String? idToken = await firebaseUser.getIdToken(true);
+      final headers = await _getAuthHeaders(
+        contentType: 'application/x-www-form-urlencoded',
+      );
 
-      if (idToken == null) {
-        throw Exception('Failed to get ID token');
-      }
-
-      // Prepare form data - only include company_name if provided
       final Map<String, String> formData = {
-        'fullname': fullname,
-        'email': email,
-        'phone_number': phoneNumber,
+        'fullname': fullname.trim(),
+        'email': email.trim(),
+        'phone_number': phoneNumber.trim(),
       };
 
-      // Add company name only if provided and not empty
-      if (companyName != null && companyName.isNotEmpty) {
-        formData['company_name'] = companyName;
+      if (companyName?.isNotEmpty == true) {
+        formData['company_name'] = companyName!.trim();
       }
 
-      // Make API call
-      final response = await http
+      final response = await _httpClient
           .put(
             Uri.parse('$baseUrl/user/update'),
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $idToken',
-            },
+            headers: headers,
             body: formData,
           )
           .timeout(timeoutDuration);
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> userData = json.decode(response.body);
-        return userData;
+        return json.decode(response.body) as Map<String, dynamic>;
       } else {
-        throw Exception(
-          'Update failed: ${response.statusCode} - ${response.body}',
-        );
+        _handleHttpError(response);
+        return null;
       }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
     } catch (e) {
-      print('Update user error: $e');
-      rethrow;
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException ||
+          e is ValidationException) {
+        rethrow;
+      }
+      throw ApiException('Update failed: $e');
     }
   }
 
+  /// Gets vehicle types with caching
   static Future<List<VehicleType>> getVehicleTypes() async {
+    // Check cache first
+    if (_vehicleTypesCache != null &&
+        _cacheTimestamp != null &&
+        DateTime.now().difference(_cacheTimestamp!) < cacheValidity) {
+      return _vehicleTypesCache!;
+    }
+
     try {
-      final response = await http
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final response = await _httpClient
           .get(
             Uri.parse('$baseUrl/vehicle/types'),
             headers: {'Accept': 'application/json'},
@@ -139,20 +201,31 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = json.decode(response.body);
-        return jsonList.map((json) => VehicleType.fromJson(json)).toList();
+        final vehicleTypes =
+            jsonList.map((json) => VehicleType.fromJson(json)).toList();
+
+        // Cache the results
+        _vehicleTypesCache = vehicleTypes;
+        _cacheTimestamp = DateTime.now();
+
+        return vehicleTypes;
       } else {
-        throw Exception(
-          'Failed to fetch vehicle types: ${response.statusCode}',
-        );
+        _handleHttpError(response);
+        return [];
       }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
     } catch (e) {
-      print('Get vehicle types error: $e');
-      rethrow;
+      if (e is ApiException || e is ConnectivityException) {
+        rethrow;
+      }
+      throw ApiException('Failed to fetch vehicle types: $e');
     }
   }
 
-  // Create vehicle
-  // Update the createVehicle method in AuthService
+  /// Creates vehicle with enhanced validation and error handling
   static Future<Vehicle?> createVehicle({
     required String vehicleNumber,
     required String vehicleType,
@@ -161,72 +234,139 @@ class AuthService {
     String? fuelType,
     File? image,
   }) async {
+    // Input validation
+    if (vehicleNumber.trim().isEmpty) {
+      throw ValidationException('Vehicle number cannot be empty');
+    }
+    if (vehicleType.trim().isEmpty) {
+      throw ValidationException('Vehicle type cannot be empty');
+    }
+    if (image != null && !await image.exists()) {
+      throw ValidationException('Image file does not exist');
+    }
+
     try {
-      // Get current Firebase user
-      final User? firebaseUser = FirebaseAuth.instance.currentUser;
-
-      if (firebaseUser == null) {
-        throw Exception('No Firebase user found');
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
       }
 
-      // Get Firebase JWT token
-      final String? idToken = await firebaseUser.getIdToken(true);
+      final headers = await _getAuthHeaders();
 
-      if (idToken == null) {
-        throw Exception('Failed to get ID token');
-      }
-
-      // Create multipart request
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/vehicle/create'),
       );
 
-      // Add headers
+      // Add headers (remove Content-Type as it's set automatically for multipart)
       request.headers.addAll({
         'Accept': 'application/json',
-        'Authorization': 'Bearer $idToken',
+        'Authorization': headers['Authorization']!,
       });
 
       // Add required fields
-      request.fields['vehicle_number'] = vehicleNumber;
-      request.fields['vehicle_type'] = vehicleType;
+      request.fields['vehicle_number'] = vehicleNumber.trim();
+      request.fields['vehicle_type'] = vehicleType.trim();
 
       // Add optional fields
-      if (name != null && name.isNotEmpty) {
-        request.fields['name'] = name;
+      if (name?.isNotEmpty == true) {
+        request.fields['name'] = name!.trim();
       }
-      if (brand != null && brand.isNotEmpty) {
-        request.fields['brand'] = brand;
+      if (brand?.isNotEmpty == true) {
+        request.fields['brand'] = brand!.trim();
       }
-      if (fuelType != null && fuelType.isNotEmpty) {
-        request.fields['fuel_type'] = fuelType;
+      if (fuelType?.isNotEmpty == true) {
+        request.fields['fuel_type'] = fuelType!.trim();
       }
 
       // Add image if provided
       if (image != null) {
-        var imageFile = await http.MultipartFile.fromPath('image', image.path);
+        final imageFile = await http.MultipartFile.fromPath(
+          'image',
+          image.path,
+        );
         request.files.add(imageFile);
       }
 
-      // Send request
-      var streamedResponse = await request.send().timeout(timeoutDuration);
-      var response = await http.Response.fromStream(streamedResponse);
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      final streamedResponse = await request.send().timeout(timeoutDuration);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> vehicleData = json.decode(response.body);
         return Vehicle.fromJson(vehicleData);
       } else {
-        throw Exception(
-          'Create vehicle failed: ${response.statusCode} - ${response.body}',
-        );
+        _handleHttpError(response);
+        return null;
       }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
     } catch (e) {
-      print('Create vehicle error: $e');
-      rethrow;
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException ||
+          e is ValidationException) {
+        rethrow;
+      }
+      throw ApiException('Create vehicle failed: $e');
     }
   }
+
+  /// Validates email format
+  static bool _isValidEmail(String email) {
+    return RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email);
+  }
+
+  /// Validates phone number format (basic validation)
+  static bool _isValidPhoneNumber(String phoneNumber) {
+    return RegExp(
+      r'^\+?[1-9]\d{1,14}$',
+    ).hasMatch(phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), ''));
+  }
+
+  /// Clears cache (useful for testing or manual refresh)
+  static void clearCache() {
+    _vehicleTypesCache = null;
+    _cacheTimestamp = null;
+  }
+
+  /// Disposes HTTP client (call this when app is closing)
+  static void dispose() {
+    _httpClient.close();
+  }
+}
+
+// Custom exception classes for better error handling
+class AuthException implements Exception {
+  final String message;
+  AuthException(this.message);
+
+  @override
+  String toString() => 'AuthException: $message';
+}
+
+class ApiException implements Exception {
+  final String message;
+  ApiException(this.message);
+
+  @override
+  String toString() => 'ApiException: $message';
+}
+
+class ConnectivityException implements Exception {
+  final String message;
+  ConnectivityException(this.message);
+
+  @override
+  String toString() => 'ConnectivityException: $message';
+}
+
+class ValidationException implements Exception {
+  final String message;
+  ValidationException(this.message);
+
+  @override
+  String toString() => 'ValidationException: $message';
 }

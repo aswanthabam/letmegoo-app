@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/models/login_method.dart';
-import 'package:letmegoo/screens/add_vehicle_page.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/models/user_model.dart';
 import 'package:letmegoo/screens/login_page.dart';
@@ -108,10 +107,10 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       // Parse user data
-      final UserModel user = UserModel.fromJson(userData!);
+      final UserModel user = UserModel.fromJson(userData);
 
       // Check if user has valid username
-      if (user.fullname != "Unknown User") {
+      if (user.fullname != "Unknown User" && user.phoneNumber != null) {
         print(user.fullname);
         // User has complete profile, navigate to home
         _navigateToHome();

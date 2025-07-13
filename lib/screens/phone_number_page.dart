@@ -4,7 +4,6 @@ import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/screens/otp_page.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
 class PhoneNumberPage extends StatefulWidget {
   const PhoneNumberPage({super.key});
@@ -17,17 +16,11 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
   final TextEditingController _phoneController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
-  String? _verificationId;
 
   @override
   void dispose() {
     _phoneController.dispose();
     super.dispose();
-  }
-
-  Future<bool> _checkConnectivity() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult != ConnectivityResult.none;
   }
 
   Future<void> _sendOTP() async {
@@ -269,7 +262,7 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
                             SizedBox(height: screenHeight * 0.05),
 
                             // Phone number input with country code
-                            Container(
+                            SizedBox(
                               width:
                                   screenWidth *
                                   (isLargeScreen

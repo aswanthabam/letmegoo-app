@@ -5,7 +5,7 @@ import 'package:letmegoo/screens/home_page.dart';
 import 'package:letmegoo/screens/profile_page.dart';
 
 class MainApp extends StatefulWidget {
-  const MainApp({Key? key}) : super(key: key);
+  const MainApp({super.key});
 
   @override
   State<MainApp> createState() => _MainAppState();

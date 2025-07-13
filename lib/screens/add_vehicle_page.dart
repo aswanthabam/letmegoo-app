@@ -7,7 +7,6 @@ import 'package:letmegoo/widgets/commonbutton.dart';
 import 'package:letmegoo/widgets/main_app.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/models/vehicle_type.dart';
-import 'package:letmegoo/models/vehicle.dart';
 import 'vehicle_add_success_page.dart';
 
 class AddVehiclePage extends StatefulWidget {
