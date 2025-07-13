@@ -312,6 +312,182 @@ class AuthService {
     }
   }
 
+  // Get user's vehicles
+  static Future<List<Vehicle>> getUserVehicles() async {
+    try {
+      // Get current Firebase user
+      final User? firebaseUser = FirebaseAuth.instance.currentUser;
+
+      if (firebaseUser == null) {
+        throw Exception('No Firebase user found');
+      }
+
+      // Get Firebase JWT token
+      final String? idToken = await firebaseUser.getIdToken(true);
+
+      if (idToken == null) {
+        throw Exception('Failed to get ID token');
+      }
+
+      // Make API call to get user vehicles
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/vehicle/list',
+            ), // Assuming this endpoint lists user's vehicles
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $idToken',
+            },
+          )
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> vehiclesJson = json.decode(response.body);
+        return vehiclesJson.map((json) => Vehicle.fromJson(json)).toList();
+      } else {
+        throw Exception(
+          'Failed to fetch vehicles: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Get vehicles error: $e');
+      rethrow;
+    }
+  }
+
+  // lib/services/auth_service.dart (Add this method)
+  static Future<Vehicle?> updateVehicle({
+    required String vehicleId,
+    required String vehicleNumber,
+    required String vehicleType,
+    String? name,
+    String? brand,
+    String? fuelType,
+    File? image,
+  }) async {
+    try {
+      // Get current Firebase user
+      final User? firebaseUser = FirebaseAuth.instance.currentUser;
+
+      if (firebaseUser == null) {
+        throw Exception('No Firebase user found');
+      }
+
+      // Get Firebase JWT token
+      final String? idToken = await firebaseUser.getIdToken(true);
+
+      if (idToken == null) {
+        throw Exception('Failed to get ID token');
+      }
+
+      // Create multipart request
+      var request = http.MultipartRequest(
+        'PUT', // or 'PATCH' depending on your API
+        Uri.parse('$baseUrl/vehicle/update/$vehicleId'),
+      );
+
+      // Add headers
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $idToken',
+      });
+
+      // Add required fields
+      request.fields['vehicle_number'] = vehicleNumber;
+      request.fields['vehicle_type'] = vehicleType;
+
+      // Add optional fields
+      if (name != null && name.isNotEmpty) {
+        request.fields['name'] = name;
+      }
+      if (brand != null && brand.isNotEmpty) {
+        request.fields['brand'] = brand;
+      }
+      if (fuelType != null && fuelType.isNotEmpty) {
+        request.fields['fuel_type'] = fuelType;
+      }
+
+      // Add image if provided
+      if (image != null) {
+        var imageFile = await http.MultipartFile.fromPath('image', image.path);
+        request.files.add(imageFile);
+      }
+
+      // Send request
+      var streamedResponse = await request.send().timeout(timeoutDuration);
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> vehicleData = json.decode(response.body);
+        return Vehicle.fromJson(vehicleData);
+      } else {
+        throw Exception(
+          'Update vehicle failed: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Update vehicle error: $e');
+      rethrow;
+    }
+  }
+
+  // Get specific vehicle by ID (if needed)
+  static Future<Vehicle?> getVehicleById(String vehicleId) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/vehicle/get/$vehicleId'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> vehicleJson = json.decode(response.body);
+        return Vehicle.fromJson(vehicleJson);
+      } else {
+        throw Exception('Failed to fetch vehicle: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get vehicle by ID error: $e');
+      rethrow;
+    }
+  }
+
+  // Delete vehicle
+  static Future<bool> deleteVehicle(String vehicleId) async {
+    try {
+      // Get current Firebase user
+      final User? firebaseUser = FirebaseAuth.instance.currentUser;
+
+      if (firebaseUser == null) {
+        throw Exception('No Firebase user found');
+      }
+
+      // Get Firebase JWT token
+      final String? idToken = await firebaseUser.getIdToken(true);
+
+      if (idToken == null) {
+        throw Exception('Failed to get ID token');
+      }
+
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/vehicle/delete/$vehicleId'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $idToken',
+            },
+          )
+          .timeout(timeoutDuration);
+
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      print('Delete vehicle error: $e');
+      rethrow;
+    }
+  }
+
   /// Validates email format
   static bool _isValidEmail(String email) {
     return RegExp(

@@ -1,7 +1,7 @@
 // lib/pages/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
-import 'package:letmegoo/my_vehicles_screen.dart';
+import 'package:letmegoo/my_vehicles_page.dart';
 import '../../widgets/profileoption.dart';
 import '../../widgets/usertile.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -84,11 +84,7 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           // Enhanced User Profile Card
                           Container(
-       
-       
-       
-       
-                           decoration: BoxDecoration(
+                            decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
@@ -170,8 +166,7 @@ class ProfilePage extends StatelessWidget {
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (context) =>
-                                                const MyVehiclesScreen(),
+                                            (context) => const MyVehiclesPage(),
                                       ),
                                     );
                                   },
