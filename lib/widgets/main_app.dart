@@ -1,5 +1,6 @@
 // lib/main_app.dart
 import 'package:flutter/material.dart';
+import 'package:letmegoo/screens/create_report_page.dart';
 import 'package:letmegoo/screens/home_page.dart';
 import 'package:letmegoo/screens/profile_page.dart';
 
@@ -21,11 +22,9 @@ class _MainAppState extends State<MainApp> {
 
   void _onAddPressed() {
     // Handle add button action - navigate to report/add screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Add Report'),
-        duration: Duration(seconds: 1),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateReportPage()),
     );
   }
 

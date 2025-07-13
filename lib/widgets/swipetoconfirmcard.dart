@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
+import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 
 class SwipeToConfirmCard extends StatelessWidget {
@@ -28,10 +29,7 @@ class SwipeToConfirmCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Image.asset(
-                    'assets/images/unlock.wepg',
-                    fit: BoxFit.cover,
-                  ),
+                  child: Image.asset(AppImages.unlock, fit: BoxFit.cover),
                 ),
                 const SizedBox(width: 8),
                 Container(
