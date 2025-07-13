@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/models/login_method.dart';
+import 'package:letmegoo/screens/add_vehicle_page.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/models/user_model.dart';
 import 'package:letmegoo/screens/login_page.dart';
@@ -109,8 +111,8 @@ class _SplashScreenState extends State<SplashScreen>
       final UserModel user = UserModel.fromJson(userData!);
 
       // Check if user has valid username
-      if (userData["phone_number"] != "Unknown User") {
-        print(userData['fullname']);
+      if (user.fullname != "Unknown User") {
+        print(user.fullname);
         // User has complete profile, navigate to home
         _navigateToHome();
       } else {
@@ -147,13 +149,43 @@ class _SplashScreenState extends State<SplashScreen>
                 FadeTransition(opacity: animation, child: child),
       ),
     );
+    // Navigator.of(context).pushReplacement(
+    //   PageRouteBuilder(
+    //     transitionDuration: const Duration(milliseconds: 600),
+    //     pageBuilder:
+    //         (_, __, ___) =>
+    //             const AddVehiclePage(), // Your main app with bottom nav
+    //     transitionsBuilder:
+    //         (_, animation, __, child) =>
+    //             FadeTransition(opacity: animation, child: child),
+    //   ),
+    // );
   }
 
+  // In your splash_screen.dart, update the _navigateToUserDetails method:
   void _navigateToUserDetails() {
+    // Determine login method
+    final User? user = FirebaseAuth.instance.currentUser;
+    LoginMethod loginMethod = LoginMethod.unknown;
+
+    if (user != null) {
+      for (UserInfo provider in user.providerData) {
+        switch (provider.providerId) {
+          case 'phone':
+            loginMethod = LoginMethod.phone;
+            break;
+          case 'google.com':
+            loginMethod = LoginMethod.google;
+            break;
+        }
+      }
+    }
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (_, __, ___) => const UserDetailRegPage(),
+        pageBuilder:
+            (_, __, ___) => UserDetailRegPage(loginMethod: loginMethod),
         transitionsBuilder:
             (_, animation, __, child) =>
                 FadeTransition(opacity: animation, child: child),

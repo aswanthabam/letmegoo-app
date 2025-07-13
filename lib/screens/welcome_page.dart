@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/models/login_method.dart';
 import 'package:letmegoo/screens/user_detail_reg_page.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -82,6 +84,39 @@ class _WelcomePageState extends State<WelcomePage>
     _startSequence();
   }
 
+  // Method to determine login method from Firebase user
+  LoginMethod _determineLoginMethod() {
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return LoginMethod.unknown;
+    }
+
+    // Check provider data to determine login method
+    for (UserInfo provider in user.providerData) {
+      switch (provider.providerId) {
+        case 'phone':
+          return LoginMethod.phone;
+        case 'google.com':
+          return LoginMethod.google;
+      }
+    }
+
+    // Fallback: check if phone number exists
+    if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) {
+      return LoginMethod.phone;
+    }
+
+    // Check if signed in with Google (alternative check)
+    if (user.email != null &&
+        user.email!.isNotEmpty &&
+        user.displayName != null) {
+      return LoginMethod.google;
+    }
+
+    return LoginMethod.unknown;
+  }
+
   Future<void> _startSequence() async {
     try {
       // Step 1: Lock enters smoothly from top
@@ -98,10 +133,14 @@ class _WelcomePageState extends State<WelcomePage>
       await Future.delayed(const Duration(seconds: 3));
 
       if (mounted) {
+        // Determine login method before navigation
+        final LoginMethod loginMethod = _determineLoginMethod();
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 1000),
-            pageBuilder: (_, __, ___) => const UserDetailRegPage(),
+            pageBuilder:
+                (_, __, ___) => UserDetailRegPage(loginMethod: loginMethod),
             transitionsBuilder:
                 (_, animation, __, child) =>
                     FadeTransition(opacity: animation, child: child),
@@ -110,8 +149,12 @@ class _WelcomePageState extends State<WelcomePage>
       }
     } catch (e) {
       if (mounted) {
+        // Fallback navigation with unknown login method
+        final LoginMethod loginMethod = _determineLoginMethod();
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const UserDetailRegPage()),
+          MaterialPageRoute(
+            builder: (_) => UserDetailRegPage(loginMethod: loginMethod),
+          ),
         );
       }
     }
