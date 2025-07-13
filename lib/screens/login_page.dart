@@ -1,12 +1,146 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/screens/phone_number_page.dart';
+import 'package:letmegoo/screens/user_detail_reg_page.dart';
+import 'package:letmegoo/screens/welcome_page.dart';
+import 'package:letmegoo/widgets/main_app.dart';
 import 'package:letmegoo/widgets/commonbutton.dart';
 import 'package:letmegoo/widgets/loginactionrow.dart';
+import 'package:letmegoo/services/google_auth_service.dart';
+import 'package:letmegoo/services/auth_service.dart';
+import 'package:letmegoo/models/login_method.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  bool _isGoogleLoading = false;
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    try {
+      // Sign in with Google
+      final UserCredential? userCredential =
+          await GoogleAuthService.signInWithGoogle();
+
+      if (userCredential == null) {
+        // User canceled sign-in
+        setState(() {
+          _isGoogleLoading = false;
+        });
+        return;
+      }
+
+      final User? user = userCredential.user;
+      if (user == null) {
+        throw Exception('Failed to get user information');
+      }
+
+      _showSnackBar('Google sign-in successful!', isError: false);
+
+      // Check if user profile is complete via API
+      try {
+        final userData = await AuthService.authenticateUser();
+
+        if (userData != null) {
+          // User exists in backend, check if profile is complete
+          final String? fullname = userData['fullname'];
+
+          if (fullname != null && fullname.isNotEmpty) {
+            // Profile is complete, navigate to main app
+            _navigateToMainApp();
+          } else {
+            // Profile incomplete, navigate to user details
+            _navigateToUserDetails();
+          }
+        } else {
+          // User doesn't exist in backend, navigate to welcome/user details
+          _navigateToWelcome();
+        }
+      } catch (e) {
+        // API call failed, but Google login succeeded
+        // Navigate to welcome page to complete setup
+        _navigateToWelcome();
+      }
+    } on FirebaseAuthException catch (e) {
+      _handleFirebaseError(e);
+    } catch (e) {
+      _showSnackBar('Sign-in failed: ${e.toString()}', isError: true);
+    } finally {
+      setState(() {
+        _isGoogleLoading = false;
+      });
+    }
+  }
+
+  void _handleFirebaseError(FirebaseAuthException e) {
+    String errorMessage;
+    switch (e.code) {
+      case 'account-exists-with-different-credential':
+        errorMessage = 'Account exists with different sign-in method';
+        break;
+      case 'invalid-credential':
+        errorMessage = 'Invalid credentials';
+        break;
+      case 'operation-not-allowed':
+        errorMessage = 'Google sign-in is not enabled';
+        break;
+      case 'user-disabled':
+        errorMessage = 'This account has been disabled';
+        break;
+      case 'user-not-found':
+        errorMessage = 'No account found with this email';
+        break;
+      case 'wrong-password':
+        errorMessage = 'Incorrect password';
+        break;
+      case 'too-many-requests':
+        errorMessage = 'Too many attempts. Please try again later';
+        break;
+      default:
+        errorMessage = 'Sign-in failed: ${e.message}';
+    }
+    _showSnackBar(errorMessage, isError: true);
+  }
+
+  void _navigateToMainApp() {
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp()));
+  }
+
+  void _navigateToWelcome() {
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const WelcomePage()));
+  }
+
+  void _navigateToUserDetails() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => UserDetailRegPage(loginMethod: LoginMethod.google),
+      ),
+    );
+  }
+
+  void _showSnackBar(String message, {required bool isError}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? AppColors.darkRed : AppColors.darkGreen,
+        duration: Duration(seconds: isError ? 4 : 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -199,9 +333,9 @@ class LoginPage extends StatelessWidget {
 
                       SizedBox(height: screenHeight * 0.02),
 
-                      // Google Login Button - Responsive
+                      // Google Login Button - Enhanced with loading state
                       GestureDetector(
-                        onTap: () {},
+                        onTap: _isGoogleLoading ? null : _handleGoogleSignIn,
                         child: Container(
                           width:
                               screenWidth *
@@ -214,33 +348,67 @@ class LoginPage extends StatelessWidget {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: AppColors.textSecondary,
+                              color:
+                                  _isGoogleLoading
+                                      ? AppColors.textSecondary.withOpacity(0.3)
+                                      : AppColors.textSecondary,
                               width: 1,
                             ),
+                            color:
+                                _isGoogleLoading
+                                    ? AppColors.textSecondary.withOpacity(0.1)
+                                    : AppColors.background,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.asset(
-                                AppImages.google_logo,
-                                width:
-                                    screenWidth *
-                                    (isLargeScreen
-                                        ? 0.02
-                                        : isTablet
-                                        ? 0.04
-                                        : 0.06),
-                                height:
-                                    screenWidth *
-                                    (isLargeScreen
-                                        ? 0.02
-                                        : isTablet
-                                        ? 0.04
-                                        : 0.06),
-                              ),
+                              if (_isGoogleLoading) ...[
+                                SizedBox(
+                                  width:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.02
+                                          : isTablet
+                                          ? 0.04
+                                          : 0.06),
+                                  height:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.02
+                                          : isTablet
+                                          ? 0.04
+                                          : 0.06),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                Image.asset(
+                                  AppImages.google_logo,
+                                  width:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.02
+                                          : isTablet
+                                          ? 0.04
+                                          : 0.06),
+                                  height:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.02
+                                          : isTablet
+                                          ? 0.04
+                                          : 0.06),
+                                ),
+                              ],
                               SizedBox(width: screenWidth * 0.025),
                               Text(
-                                "Login With Google",
+                                _isGoogleLoading
+                                    ? "Signing in..."
+                                    : "Login With Google",
                                 style: TextStyle(
                                   fontSize:
                                       screenWidth *
@@ -249,7 +417,12 @@ class LoginPage extends StatelessWidget {
                                           : isTablet
                                           ? 0.025
                                           : 0.04),
-                                  color: AppColors.textSecondary,
+                                  color:
+                                      _isGoogleLoading
+                                          ? AppColors.textSecondary.withOpacity(
+                                            0.7,
+                                          )
+                                          : AppColors.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
