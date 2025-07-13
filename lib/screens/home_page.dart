@@ -1,8 +1,9 @@
-// lib/pages/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/widgets/reportcard.dart';
 import '../../widgets/custom_bottom_nav.dart';
+import '../widgets/buildreportsection.dart';
+import '../widgets/builddivider.dart';
 
 class HomePage extends StatelessWidget {
   final Function(int) onNavigate;
@@ -21,7 +22,7 @@ class HomePage extends StatelessWidget {
     final isTablet = screenWidth > 600;
     final isLargeScreen = screenWidth > 900;
 
-    // Sample data arrays for different categories
+    // Dummy Data
     final List<Map<String, dynamic>> liveReportingsByYou = [
       {
         'timeDate': '16:30 | 23rd July 2025',
@@ -114,172 +115,130 @@ class HomePage extends StatelessWidget {
       },
     ];
 
+    final allReportsEmpty =
+        liveReportingsByYou.isEmpty &&
+        liveReportingsAgainstYou.isEmpty &&
+        solvedReportingsByYou.isEmpty &&
+        solvedReportingsAgainstYou.isEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      body: MediaQuery.removePadding(
+        context: context,
+        removeBottom: true,
         child: Stack(
           children: [
             // Main Content
             SingleChildScrollView(
               padding: EdgeInsets.only(
-                left: screenWidth * 0.02, // Reduced padding for wider cards
+                left: screenWidth * 0.02,
                 right: screenWidth * 0.02,
-                top: screenHeight * 0.02,
-                bottom: screenHeight * 0.12, // Space for bottom nav
+                top: screenHeight * 0.05,
+                bottom: screenHeight * 0.12,
               ),
               child: Container(
                 constraints: BoxConstraints(
-                  maxWidth:
-                      isLargeScreen
-                          ? 900
-                          : double.infinity, // Increased max width
+                  maxWidth: isLargeScreen ? 900 : double.infinity,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Live Reportings By You Section
-                    if (liveReportingsByYou.isNotEmpty) ...[
-                      _buildReportSection(
-                        context: context,
-                        title:
-                            "Live Reportings By You (${liveReportingsByYou.length})",
-                        reports: liveReportingsByYou,
-                        screenWidth: screenWidth,
-                        isTablet: isTablet,
-                        isLargeScreen: isLargeScreen,
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      _buildDivider(screenWidth),
-                      SizedBox(height: screenHeight * 0.02),
-                    ],
+                child:
+                    allReportsEmpty
+                        ? SizedBox(
+                          height: screenHeight * 0.88,
+                          width: double.infinity,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/images/Empty.png',
+                                  width: screenWidth * 0.7,
+                                  fit: BoxFit.contain,
+                                ),
 
-                    // 2. Live Reportings Against You Section
-                    if (liveReportingsAgainstYou.isNotEmpty) ...[
-                      _buildReportSection(
-                        context: context,
-                        title:
-                            "Live Reportings Against You (${liveReportingsAgainstYou.length})",
-                        reports: liveReportingsAgainstYou,
-                        screenWidth: screenWidth,
-                        isTablet: isTablet,
-                        isLargeScreen: isLargeScreen,
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      _buildDivider(screenWidth),
-                      SizedBox(height: screenHeight * 0.02),
-                    ],
-
-                    // 3. Solved Reportings By You Section
-                    if (solvedReportingsByYou.isNotEmpty) ...[
-                      _buildReportSection(
-                        context: context,
-                        title:
-                            "Solved Reportings By You (${solvedReportingsByYou.length})",
-                        reports: solvedReportingsByYou,
-                        screenWidth: screenWidth,
-                        isTablet: isTablet,
-                        isLargeScreen: isLargeScreen,
-                      ),
-                      SizedBox(height: screenHeight * 0.02),
-                      _buildDivider(screenWidth),
-                      SizedBox(height: screenHeight * 0.02),
-                    ],
-
-                    // 4. Solved Reportings Against You Section
-                    if (solvedReportingsAgainstYou.isNotEmpty) ...[
-                      _buildReportSection(
-                        context: context,
-                        title:
-                            "Solved Reportings Against You (${solvedReportingsAgainstYou.length})",
-                        reports: solvedReportingsAgainstYou,
-                        screenWidth: screenWidth,
-                        isTablet: isTablet,
-                        isLargeScreen: isLargeScreen,
-                      ),
-                    ],
-
-                    // Extra spacing at bottom
-                    SizedBox(height: screenHeight * 0.02),
-                  ],
-                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No reportings made by you or against you',
+                                  style: AppFonts.bold16(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (liveReportingsByYou.isNotEmpty) ...[
+                              buildReportSection(
+                                context: context,
+                                title:
+                                    "Live Reportings By You (${liveReportingsByYou.length})",
+                                reports: liveReportingsByYou,
+                                screenWidth: screenWidth,
+                                isTablet: isTablet,
+                                isLargeScreen: isLargeScreen,
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              buildDivider(screenWidth),
+                              SizedBox(height: screenHeight * 0.02),
+                            ],
+                            if (liveReportingsAgainstYou.isNotEmpty) ...[
+                              buildReportSection(
+                                context: context,
+                                title:
+                                    "Live Reportings Against You (${liveReportingsAgainstYou.length})",
+                                reports: liveReportingsAgainstYou,
+                                screenWidth: screenWidth,
+                                isTablet: isTablet,
+                                isLargeScreen: isLargeScreen,
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              buildDivider(screenWidth),
+                              SizedBox(height: screenHeight * 0.02),
+                            ],
+                            if (solvedReportingsByYou.isNotEmpty) ...[
+                              buildReportSection(
+                                context: context,
+                                title:
+                                    "Solved Reportings By You (${solvedReportingsByYou.length})",
+                                reports: solvedReportingsByYou,
+                                screenWidth: screenWidth,
+                                isTablet: isTablet,
+                                isLargeScreen: isLargeScreen,
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                              buildDivider(screenWidth),
+                              SizedBox(height: screenHeight * 0.02),
+                            ],
+                            if (solvedReportingsAgainstYou.isNotEmpty) ...[
+                              buildReportSection(
+                                context: context,
+                                title:
+                                    "Solved Reportings Against You (${solvedReportingsAgainstYou.length})",
+                                reports: solvedReportingsAgainstYou,
+                                screenWidth: screenWidth,
+                                isTablet: isTablet,
+                                isLargeScreen: isLargeScreen,
+                              ),
+                            ],
+                            SizedBox(height: screenHeight * 0.02),
+                          ],
+                        ),
               ),
             ),
 
             // Bottom Navigation
-            CustomBottomNav(
-              currentIndex: 0,
-              onTap: onNavigate,
-              onAddPressed: onAddPressed,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: CustomBottomNav(
+                currentIndex: 0,
+                onTap: onNavigate,
+                onInformPressed: onAddPressed,
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildReportSection({
-    required BuildContext context,
-    required String title,
-    required List<Map<String, dynamic>> reports,
-    required double screenWidth,
-    required bool isTablet,
-    required bool isLargeScreen,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.03, // Reduced horizontal padding
-        vertical: screenWidth * 0.04,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-            child: Text(
-              title,
-              style: AppFonts.bold16().copyWith(
-                fontSize:
-                    screenWidth *
-                    (isLargeScreen
-                        ? 0.018
-                        : isTablet
-                        ? 0.028
-                        : 0.045),
-              ),
-            ),
-          ),
-          SizedBox(height: screenWidth * 0.02),
-          // Report Cards with wider width
-          ...reports.map(
-            (report) => Container(
-              width: double.infinity, // Full width
-              margin: EdgeInsets.symmetric(vertical: screenWidth * 0.01),
-              child: ReportCard(
-                timeDate: report['timeDate'],
-                status: report['status'],
-                location: report['location'],
-                message: report['message'],
-                reporter: report['reporter'],
-                profileImage: report['profileImage'],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider(double screenWidth) {
-    return Center(
-      child: Container(
-        width: screenWidth * 0.85, // Slightly wider divider
-        height: 1,
-        color: AppColors.textSecondary.withOpacity(0.3),
       ),
     );
   }
