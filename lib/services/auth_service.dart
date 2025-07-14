@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/models/vehicle.dart';
@@ -178,6 +179,131 @@ class AuthService {
     }
   }
 
+  /// Updates user privacy preference
+  static Future<Map<String, dynamic>?> updatePrivacyPreference(
+    String privacyPreference,
+  ) async {
+    try {
+      // Check connectivity first
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders(
+        contentType: 'application/x-www-form-urlencoded',
+      );
+
+      // Map UI values to API values
+      String apiValue;
+      switch (privacyPreference) {
+        case 'all':
+          apiValue = 'public';
+          break;
+        case 'name':
+          apiValue = 'private';
+          break;
+        case 'anonymous':
+          apiValue = 'anonymous';
+          break;
+        default:
+          apiValue = 'public';
+      }
+
+      final response = await _httpClient
+          .patch(
+            Uri.parse('$baseUrl/user/privacy-preference'),
+            headers: headers,
+            body: 'privacy_preference=$apiValue',
+          )
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        _handleHttpError(response);
+        return null;
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } on FormatException {
+      throw ApiException('Invalid response format');
+    } catch (e) {
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException) {
+        rethrow;
+      }
+      throw ApiException('Failed to update privacy preference: $e');
+    }
+  }
+
+  static Future<void> logout(BuildContext context) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31C5F4)),
+          ),
+        ),
+      );
+
+      // Sign out from Firebase
+      await FirebaseAuth.instance.signOut();
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      // Navigate to login page and clear all previous routes
+      if (context.mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login', // Replace with your login page route
+          (route) => false,
+        );
+      }
+
+    } catch (e) {
+      // Close loading dialog if still open
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+
+      // Show error dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Logout Error'),
+            content: Text('Failed to logout: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  /// Alternative logout function that returns success/failure status
+  static Future<bool> logoutWithStatus() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      return true;
+    } catch (e) {
+      print('Logout error: $e');
+      return false;
+    }
+  }
+
   /// Gets vehicle types with caching
   static Future<List<VehicleType>> getVehicleTypes() async {
     // Check cache first
@@ -312,7 +438,7 @@ class AuthService {
     }
   }
 
-  // Get user's vehicles
+  // lib/services/auth_service.dart (Alternative version)
   static Future<List<Vehicle>> getUserVehicles() async {
     try {
       // Get current Firebase user
@@ -332,9 +458,7 @@ class AuthService {
       // Make API call to get user vehicles
       final response = await http
           .get(
-            Uri.parse(
-              '$baseUrl/vehicle/list',
-            ), // Assuming this endpoint lists user's vehicles
+            Uri.parse('$baseUrl/vehicle/list'),
             headers: {
               'Accept': 'application/json',
               'Authorization': 'Bearer $idToken',
@@ -342,9 +466,64 @@ class AuthService {
           )
           .timeout(timeoutDuration);
 
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        final List<dynamic> vehiclesJson = json.decode(response.body);
-        return vehiclesJson.map((json) => Vehicle.fromJson(json)).toList();
+        try {
+          final dynamic responseData = json.decode(response.body);
+
+          List<Vehicle> vehicles = [];
+
+          if (responseData is List) {
+            // Direct list of vehicles
+            for (var item in responseData) {
+              if (item is Map<String, dynamic>) {
+                try {
+                  vehicles.add(Vehicle.fromJson(item));
+                } catch (e) {
+                  print('Error parsing vehicle: $e');
+                  print('Vehicle data: $item');
+                }
+              }
+            }
+          } else if (responseData is Map<String, dynamic>) {
+            // Object containing vehicles array
+            final possibleKeys = ['vehicles', 'data', 'results', 'items'];
+
+            for (String key in possibleKeys) {
+              if (responseData.containsKey(key) && responseData[key] is List) {
+                final List<dynamic> vehiclesList = responseData[key];
+                for (var item in vehiclesList) {
+                  if (item is Map<String, dynamic>) {
+                    try {
+                      vehicles.add(Vehicle.fromJson(item));
+                    } catch (e) {
+                      print('Error parsing vehicle: $e');
+                      print('Vehicle data: $item');
+                    }
+                  }
+                }
+                break;
+              }
+            }
+
+            // If no array found, maybe it's a single vehicle
+            if (vehicles.isEmpty) {
+              try {
+                vehicles.add(Vehicle.fromJson(responseData));
+              } catch (e) {
+                print('Could not parse as single vehicle: $e');
+              }
+            }
+          }
+
+          print('Successfully parsed ${vehicles.length} vehicles');
+          return vehicles;
+        } catch (e) {
+          print('JSON parsing error: $e');
+          throw Exception('Failed to parse vehicle data: $e');
+        }
       } else {
         throw Exception(
           'Failed to fetch vehicles: ${response.statusCode} - ${response.body}',

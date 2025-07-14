@@ -1,4 +1,3 @@
-// lib/models/vehicle.dart
 class VehicleOwner {
   final String id;
   final String privacyPreference;
@@ -16,11 +15,22 @@ class VehicleOwner {
 
   factory VehicleOwner.fromJson(Map<String, dynamic> json) {
     return VehicleOwner(
-      id: json['id'] ?? '',
-      privacyPreference: json['privacy_preference'] ?? '',
-      fullname: json['fullname'] ?? '',
-      email: json['email'] ?? '',
-      phoneNumber: json['phone_number'] ?? '',
+      id: json['id']?.toString() ?? '',
+      privacyPreference: json['privacy_preference']?.toString() ?? '',
+      fullname: json['fullname']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      phoneNumber: json['phone_number']?.toString() ?? '',
+    );
+  }
+
+  // Empty constructor for when owner data is not available
+  factory VehicleOwner.empty() {
+    return VehicleOwner(
+      id: '',
+      privacyPreference: '',
+      fullname: '',
+      email: '',
+      phoneNumber: '',
     );
   }
 }
@@ -70,18 +80,30 @@ class Vehicle {
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
-    return Vehicle(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      vehicleNumber: json['vehicle_number'] ?? '',
-      owner: VehicleOwner.fromJson(json['owner'] ?? {}),
-      fuelType: json['fuel_type'] ?? '',
-      vehicleType: json['vehicle_type'] ?? '',
-      brand: json['brand'],
-      image:
-          json['image'] != null ? VehicleImage.fromJson(json['image']) : null,
-      isVerified: json['is_verified'] ?? false,
-    );
+    try {
+      return Vehicle(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        vehicleNumber: json['vehicle_number']?.toString() ?? '',
+        owner:
+            json['owner'] != null && json['owner'] is Map<String, dynamic>
+                ? VehicleOwner.fromJson(json['owner'] as Map<String, dynamic>)
+                : VehicleOwner.empty(), // Create an empty owner if not available
+        fuelType: json['fuel_type']?.toString() ?? '',
+        vehicleType: json['vehicle_type']?.toString() ?? '',
+        brand: json['brand']?.toString(),
+        image:
+            json['image'] != null && json['image'] is Map<String, dynamic>
+                ? VehicleImage.fromJson(json['image'] as Map<String, dynamic>)
+                : null,
+        isVerified:
+            json['is_verified'] == true || json['is_verified'] == 'true',
+      );
+    } catch (e) {
+      print('Error parsing Vehicle from JSON: $e');
+      print('JSON data: $json');
+      rethrow;
+    }
   }
 
   // Helper getters

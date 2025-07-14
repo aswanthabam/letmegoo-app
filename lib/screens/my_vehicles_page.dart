@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/models/vehicle.dart';
-import 'package:letmegoo/screens/add_vehicle_page.dart';
-import './widgets/deletevehicledialog.dart';
-import './widgets/editvehicledialog.dart';
-import './widgets/vehicletile.dart';
+import '../widgets/deletevehicledialog.dart';
+import '../widgets/editvehicledialog.dart';
+import '../widgets/addvehicledialog.dart';
+import '../widgets/vehicletile.dart';
 
 class MyVehiclesPage extends StatefulWidget {
   const MyVehiclesPage({super.key});
@@ -32,13 +32,16 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
         _errorMessage = null;
       });
 
+      print('Starting to load vehicles...');
       final vehiclesList = await AuthService.getUserVehicles();
+      print('Received ${vehiclesList.length} vehicles');
 
       setState(() {
         vehicles = vehiclesList;
         _isLoading = false;
       });
     } catch (e) {
+      print('Error in _loadVehicles: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -74,6 +77,24 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
     );
   }
 
+  // Helper method to extract vehicle type display value
+  String _getVehicleTypeDisplay(dynamic vehicleType) {
+    if (vehicleType == null) return 'Unknown';
+
+    if (vehicleType is String) {
+      // If it's already a string, return it
+      return vehicleType;
+    } else if (vehicleType is Map<String, dynamic>) {
+      // If it's a map like {"key":"car","value":"Car"}, extract the value
+      return vehicleType['value']?.toString() ??
+          vehicleType['key']?.toString() ??
+          'Unknown';
+    } else {
+      // Fallback to string representation
+      return vehicleType.toString();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -103,13 +124,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddVehiclePage()),
-              ).then((_) {
-                // Refresh vehicles list when returning from add vehicle page
-                _loadVehicles();
-              });
+              _showAddVehicleDialog(context);
             },
             icon: Icon(
               Icons.add,
@@ -343,10 +358,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
             SizedBox(height: screenHeight * 0.03),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddVehiclePage()),
-                ).then((_) => _loadVehicles());
+                _showAddVehicleDialog(context);
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Vehicle'),
@@ -414,7 +426,9 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                     ),
                     child: Vehicletile(
                       number: vehicle.vehicleNumber,
-                      type: vehicle.vehicleType,
+                      type: _getVehicleTypeDisplay(
+                        vehicle.vehicleType,
+                      ), // Updated to handle both formats
                       brand: vehicle.brand ?? 'Unknown',
                       model: vehicle.name.isNotEmpty ? vehicle.name : 'Vehicle',
                       image: vehicle.imageUrl,
@@ -431,10 +445,29 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
     );
   }
 
+  void _showAddVehicleDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => Addvehicledialog(
+            onAdd: (newVehicle) {
+              Navigator.pop(context);
+              _showSnackBar('Vehicle added successfully!', isError: false);
+              // Refresh the vehicles list
+              _loadVehicles();
+            },
+            onCancel: () {
+              Navigator.pop(context);
+            },
+          ),
+    );
+  }
+
   void _showDeleteDialog(BuildContext context, Vehicle vehicle) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing during deletion
+      barrierDismissible: false,
       builder:
           (_) => Deletevehicledialog(
             vehicleName: vehicle.name.isNotEmpty ? vehicle.name : null,
@@ -454,6 +487,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
             vehicle: vehicle,
             onEdit: (updatedVehicle) {
               Navigator.pop(context);
+              _showSnackBar('Vehicle updated successfully!', isError: false);
               // Refresh the vehicles list
               _loadVehicles();
             },

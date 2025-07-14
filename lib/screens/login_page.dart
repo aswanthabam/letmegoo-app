@@ -387,7 +387,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ] else ...[
                                 Image.asset(
-                                  AppImages.google_logo,
+                                  AppImages.googleLogo,
                                   width:
                                       screenWidth *
                                       (isLargeScreen
