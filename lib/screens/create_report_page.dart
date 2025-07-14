@@ -113,7 +113,7 @@ class _CreateReportPageState extends State<CreateReportPage> {
 
                       // Title
                       Text(
-                        "Report a Vehicle",
+                        "Inform Owner",
                         textAlign: TextAlign.center,
                         style: AppFonts.semiBold24().copyWith(
                           fontSize:
@@ -421,7 +421,7 @@ class _CreateReportPageState extends State<CreateReportPage> {
                 vertical: screenHeight * 0.02,
               ),
               child: CommonButton(
-                text: "Report",
+                text: "Inform",
                 onTap: () {
                   final regNumber = regNumberController.text.trim();
                   final message = messageController.text.trim();

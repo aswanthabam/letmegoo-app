@@ -37,4 +37,16 @@ class UserModel {
   }
 
   bool get hasValidUsername => fullname != null && fullname!.isNotEmpty;
+
+  // Helper method to get user initials
+  String get initials {
+    if (fullname!.isEmpty) return 'U';
+    final names = fullname!.trim().split(' ');
+    if (names.length == 1) {
+      return names[0].isNotEmpty ? names[0][0].toUpperCase() : 'U';
+    } else {
+      return (names[0].isNotEmpty ? names[0][0] : '') +
+          (names[1].isNotEmpty ? names[1][0] : '').toUpperCase();
+    }
+  }
 }

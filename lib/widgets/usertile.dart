@@ -95,7 +95,7 @@ class Usertile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  phone,
+                  "+$phone",
                   style: AppFonts.regular14().copyWith(
                     fontSize:
                         screenWidth *

@@ -4,15 +4,57 @@ import 'package:letmegoo/widgets/commonbutton.dart';
 import 'package:letmegoo/services/auth_service.dart';
 
 class PrivacyPreferencesPage extends StatefulWidget {
-  const PrivacyPreferencesPage({super.key});
+  final String currentPreference;
+  final Function(String) onPreferenceChanged;
+
+  const PrivacyPreferencesPage({
+    Key? key,
+    required this.currentPreference,
+    required this.onPreferenceChanged,
+  }) : super(key: key);
 
   @override
   State<PrivacyPreferencesPage> createState() => _PrivacyPreferencesPageState();
 }
 
 class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
-  String? _selectedOption = 'all'; // Default selection (maps to 'public')
+  String? _selectedOption;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Map the current preference to the UI value
+    _selectedOption = _mapApiToUiValue(widget.currentPreference);
+  }
+
+  // Map API values to UI values
+  String _mapApiToUiValue(String apiValue) {
+    switch (apiValue.toLowerCase()) {
+      case 'public':
+        return 'all';
+      case 'private':
+        return 'name';
+      case 'anonymous':
+        return 'anonymous';
+      default:
+        return 'all'; // Default fallback
+    }
+  }
+
+  // Map UI values to API values
+  String _mapUiToApiValue(String uiValue) {
+    switch (uiValue) {
+      case 'all':
+        return 'public';
+      case 'name':
+        return 'private';
+      case 'anonymous':
+        return 'anonymous';
+      default:
+        return 'public'; // Default fallback
+    }
+  }
 
   Future<void> _updatePrivacyPreference() async {
     if (_selectedOption == null) return;
@@ -22,12 +64,13 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
     });
 
     try {
-      final result = await AuthService.updatePrivacyPreference(
-        _selectedOption!,
-      );
+      final apiValue = _mapUiToApiValue(_selectedOption!);
+      final result = await AuthService.updatePrivacyPreference(apiValue);
 
       if (result != null) {
-        // Success
+        // Success - call the callback with the new preference
+        widget.onPreferenceChanged(apiValue);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
