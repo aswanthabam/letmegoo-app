@@ -11,10 +11,7 @@ class CustomBottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
     required this.onInformPressed,
-  }) : super(key: key);
-    required this.onAddPressed,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
