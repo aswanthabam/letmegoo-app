@@ -29,7 +29,9 @@ class ProfilePage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      body: MediaQuery.removePadding(
+        context: context,
+        removeBottom: true,
         child: Stack(
           children: [
             // Main Content
@@ -359,10 +361,15 @@ class ProfilePage extends StatelessWidget {
             ),
 
             // Bottom Navigation
-            CustomBottomNav(
-              currentIndex: 1, // Profile tab is active
-              onTap: onNavigate,
-              onAddPressed: onAddPressed,
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: CustomBottomNav(
+                currentIndex: 0,
+                onTap: onNavigate,
+                onInformPressed: () {
+                  // Your action here (can also show a dialog, navigate, etc.)
+                },
+              ),
             ),
           ],
         ),

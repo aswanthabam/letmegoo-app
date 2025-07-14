@@ -4,127 +4,81 @@ import '../constants/app_theme.dart';
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
-  final VoidCallback onAddPressed;
+  final VoidCallback onInformPressed;
 
   const CustomBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required this.onInformPressed,
+  }) : super(key: key);
     required this.onAddPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isTablet = screenWidth > 600;
-    final isLargeScreen = screenWidth > 900;
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, -3), // upward shadow
+          ),
+        ],
+      ),
 
-    return Positioned(
-      left: screenWidth * 0.05,
-      right: screenWidth * 0.05,
-      bottom: screenHeight * 0.025,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20), // internal spacing
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Background bottom bar
-          Container(
-            height: screenHeight * 0.08,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+          // Red Inform Owner button
+          ElevatedButton(
+            onPressed: onInformPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.darkRed,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 2,
+              minimumSize: const Size.fromHeight(50),
             ),
+            child: Text(
+              'Inform Owner',
+              style: AppFonts.bold14(color: AppColors.white),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Bottom nav row
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 50,
+            ), // Adjust how close to edges
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Home icon
                 IconButton(
                   icon: Icon(
                     currentIndex == 0 ? Icons.home : Icons.home_outlined,
                     color: AppColors.primary,
-                    size:
-                        screenWidth *
-                        (isLargeScreen
-                            ? 0.025
-                            : isTablet
-                            ? 0.035
-                            : 0.065),
+                    size: 28,
                   ),
                   onPressed: () => onTap(0),
                 ),
-
-                SizedBox(width: screenWidth * 0.2), // Space for center button
-                // Profile icon
                 IconButton(
                   icon: Icon(
                     currentIndex == 1 ? Icons.person : Icons.person_outline,
                     color: AppColors.primary,
-                    size:
-                        screenWidth *
-                        (isLargeScreen
-                            ? 0.025
-                            : isTablet
-                            ? 0.035
-                            : 0.065),
+                    size: 28,
                   ),
                   onPressed: () => onTap(1),
                 ),
               ],
-            ),
-          ),
-
-          // Floating Add button
-          Positioned(
-            top: -screenHeight * 0.025,
-            child: GestureDetector(
-              onTap: onAddPressed,
-              child: Container(
-                height:
-                    screenWidth *
-                    (isLargeScreen
-                        ? 0.08
-                        : isTablet
-                        ? 0.12
-                        : 0.18),
-                width:
-                    screenWidth *
-                    (isLargeScreen
-                        ? 0.08
-                        : isTablet
-                        ? 0.12
-                        : 0.18),
-                decoration: BoxDecoration(
-                  color: AppColors.darkRed,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.add,
-                  color: AppColors.white,
-                  size:
-                      screenWidth *
-                      (isLargeScreen
-                          ? 0.04
-                          : isTablet
-                          ? 0.06
-                          : 0.08),
-                ),
-              ),
             ),
           ),
         ],

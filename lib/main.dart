@@ -1,5 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
+
 import 'package:letmegoo/screens/splash_screen.dart';
 import 'package:letmegoo/screens/login_page.dart'; // Add your login page import
 import 'package:letmegoo/screens/home_page.dart'; // Add your home page import
