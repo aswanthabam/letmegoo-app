@@ -1,7 +1,9 @@
 // lib/pages/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
-import 'package:letmegoo/my_vehicles_screen.dart';
+import 'package:letmegoo/screens/my_vehicles_page.dart';
+import 'package:letmegoo/screens/privacy_preferences_page.dart';
+import 'package:letmegoo/services/auth_service.dart';
 import '../../widgets/profileoption.dart';
 import '../../widgets/usertile.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -144,6 +146,14 @@ class ProfilePage extends StatelessWidget {
                                   ),
                                   onTap: () {
                                     // Handle privacy preference
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const PrivacyPreferencesPage(),
+                                      ),
+                                    );
                                   },
                                 ),
 
@@ -168,8 +178,7 @@ class ProfilePage extends StatelessWidget {
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (context) =>
-                                                const MyVehiclesScreen(),
+                                            (context) => const MyVehiclesPage(),
                                       ),
                                     );
                                   },
@@ -303,9 +312,7 @@ class ProfilePage extends StatelessWidget {
                               ],
                             ),
                             child: TextButton.icon(
-                              onPressed: () {
-                                _showLogoutDialog(context);
-                              },
+                              onPressed: () => _showLogoutConfirmation(context),
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.symmetric(
                                   vertical: screenHeight * 0.018,
@@ -367,6 +374,30 @@ class ProfilePage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showLogoutConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Confirm Logout'),
+            content: Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  AuthService.logout(context);
+                },
+                child: Text('Logout'),
+              ),
+            ],
+          ),
     );
   }
 

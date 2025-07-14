@@ -1,3 +1,4 @@
+// lib/widgets/vehicletile.dart (Updated to work with Vehicle model)
 import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 
@@ -7,78 +8,207 @@ class Vehicletile extends StatelessWidget {
   final String brand;
   final String model;
   final String? image;
+  final bool isVerified;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
 
   const Vehicletile({
-    super.key,
+    Key? key,
     required this.number,
     required this.type,
     required this.brand,
     required this.model,
-    required this.image,
+    this.image,
+    this.isVerified = false,
     required this.onDelete,
     required this.onEdit,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.all(12.0),
-          height: 90,
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: AppColors.textSecondary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child:
-                    image != null
-                        ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.asset(image!, fit: BoxFit.cover),
-                        )
-                        : const Icon(
-                          Icons.directions_car,
-                          color: AppColors.textPrimary,
-                        ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(number, style: AppFonts.bold16()),
-                    const SizedBox(height: 4),
-                    Text(
-                      "$type | $brand | $model",
-                      style: AppFonts.regular13(color: AppColors.textSecondary),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+    final isLargeScreen = screenWidth > 900;
+
+    return Padding(
+      padding: EdgeInsets.all(screenWidth * 0.04),
+      child: Row(
+        children: [
+          // Vehicle Image
+          Container(
+            width:
+                screenWidth *
+                (isLargeScreen
+                    ? 0.08
+                    : isTablet
+                    ? 0.1
+                    : 0.15),
+            height:
+                screenWidth *
+                (isLargeScreen
+                    ? 0.08
+                    : isTablet
+                    ? 0.1
+                    : 0.15),
+            decoration: BoxDecoration(
+              color: AppColors.textSecondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child:
+                image != null && image!.isNotEmpty
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        image!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.directions_car,
+                            color: AppColors.textSecondary,
+                            size:
+                                screenWidth *
+                                (isLargeScreen
+                                    ? 0.04
+                                    : isTablet
+                                    ? 0.05
+                                    : 0.08),
+                          );
+                        },
+                      ),
+                    )
+                    : Icon(
+                      Icons.directions_car,
+                      color: AppColors.textSecondary,
+                      size:
+                          screenWidth *
+                          (isLargeScreen
+                              ? 0.04
+                              : isTablet
+                              ? 0.05
+                              : 0.08),
                     ),
+          ),
+
+          SizedBox(width: screenWidth * 0.04),
+
+          // Vehicle Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        number,
+                        style: AppFonts.semiBold16().copyWith(
+                          fontSize:
+                              screenWidth *
+                              (isLargeScreen
+                                  ? 0.016
+                                  : isTablet
+                                  ? 0.025
+                                  : 0.04),
+                        ),
+                      ),
+                    ),
+                    if (isVerified)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.02,
+                          vertical: screenWidth * 0.005,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.lightGreen,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.verified,
+                              size: screenWidth * 0.03,
+                              color: AppColors.darkGreen,
+                            ),
+                            SizedBox(width: screenWidth * 0.01),
+                            Text(
+                              'Verified',
+                              style: AppFonts.semiBold14().copyWith(
+                                fontSize: screenWidth * 0.025,
+                                color: AppColors.darkGreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
-              ),
+                SizedBox(height: screenWidth * 0.01),
+                Text(
+                  '$brand • $type',
+                  style: AppFonts.regular14().copyWith(
+                    fontSize:
+                        screenWidth *
+                        (isLargeScreen
+                            ? 0.014
+                            : isTablet
+                            ? 0.022
+                            : 0.035),
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Text(
+                  model,
+                  style: AppFonts.regular14().copyWith(
+                    fontSize:
+                        screenWidth *
+                        (isLargeScreen
+                            ? 0.014
+                            : isTablet
+                            ? 0.022
+                            : 0.035),
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Action Buttons
+          Row(
+            children: [
               IconButton(
-                icon: const Icon(Icons.edit, size: 20),
                 onPressed: onEdit,
+                icon: Icon(
+                  Icons.edit,
+                  color: AppColors.primary,
+                  size:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.02
+                          : isTablet
+                          ? 0.03
+                          : 0.05),
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete, size: 20),
                 onPressed: onDelete,
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: AppColors.darkRed,
+                  size:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.02
+                          : isTablet
+                          ? 0.03
+                          : 0.05),
+                ),
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

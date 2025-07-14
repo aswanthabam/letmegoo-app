@@ -1,8 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'package:letmegoo/screens/home_page.dart';
-import 'package:letmegoo/screens/login_page.dart';
+
 import 'package:letmegoo/screens/splash_screen.dart';
+import 'package:letmegoo/screens/login_page.dart'; // Add your login page import
+import 'package:letmegoo/screens/home_page.dart'; // Add your home page import
+// Add other screen imports as needed
 import 'firebase_options.dart'; // Import generated file from FlutterFire CLI
 
 void main() async {
@@ -29,6 +30,21 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
+      // Add routes for navigation
+      routes: {
+        '/splash': (context) => const SplashScreen(),
+        '/login': (context) => const LoginPage(), // Replace with your actual login page
+        
+        // Add other routes as needed
+        // '/profile': (context) => const ProfilePage(),
+        // '/settings': (context) => const SettingsPage(),
+      },
+      // Handle unknown routes
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const SplashScreen(),
+        );
+      },
     );
   }
 }

@@ -10,13 +10,13 @@ class Usertile extends StatelessWidget {
   final String? image;
 
   const Usertile({
-    Key? key,
+    super.key,
     required this.initials,
     required this.name,
     required this.email,
     required this.phone,
     this.image,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

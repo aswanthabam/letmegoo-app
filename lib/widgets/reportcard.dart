@@ -12,14 +12,14 @@ class ReportCard extends StatelessWidget {
   final String? profileImage;
 
   const ReportCard({
-    Key? key,
+    super.key,
     required this.timeDate,
     required this.status,
     required this.location,
     required this.message,
     required this.reporter,
     this.profileImage,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

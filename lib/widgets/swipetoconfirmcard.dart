@@ -88,11 +88,11 @@ class SwipeToConfirmCard extends StatelessWidget {
                   Icons.double_arrow_outlined,
                   color: Colors.black,
                 ),
+                onSwipe: onSwipe,
                 child: Text(
                   "Swipe Right to inform the Reporter",
                   style: AppFonts.regular13(color: AppColors.background),
                 ),
-                onSwipe: onSwipe,
               ),
             ),
           ],
