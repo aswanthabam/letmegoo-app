@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/models/user_model.dart';
 import 'package:letmegoo/screens/phone_number_page.dart';
 import 'package:letmegoo/screens/user_detail_reg_page.dart';
 import 'package:letmegoo/screens/welcome_page.dart';
@@ -52,14 +53,16 @@ class _LoginPageState extends State<LoginPage> {
         final userData = await AuthService.authenticateUser();
 
         if (userData != null) {
-          // User exists in backend, check if profile is complete
-          final String? fullname = userData['fullname'];
+          // Parse user data using UserModel (same as splash screen)
+          final UserModel userModel = UserModel.fromJson(userData);
 
-          if (fullname != null && fullname.isNotEmpty) {
-            // Profile is complete, navigate to main app
+          // Apply the same validation logic as splash screen
+          if (userModel.fullname != "Unknown User" &&
+              userModel.phoneNumber != null) {
+            // User has complete profile, navigate to main app
             _navigateToMainApp();
           } else {
-            // Profile incomplete, navigate to user details
+            // User needs to complete profile, navigate to user details
             _navigateToUserDetails();
           }
         } else {
