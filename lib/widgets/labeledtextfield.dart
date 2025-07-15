@@ -11,14 +11,14 @@ class Labeledtextfield extends StatelessWidget {
   final int maxLines;
 
   const Labeledtextfield({
-    Key? key,
+    super.key,
     required this.label,
     required this.hint,
     this.controller,
     this.enabled = true,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

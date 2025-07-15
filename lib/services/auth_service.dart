@@ -7,6 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/models/vehicle.dart';
 import 'package:letmegoo/models/vehicle_type.dart';
+import 'package:letmegoo/models/vehicle_search_result.dart';
+import 'package:letmegoo/models/report_request.dart';
+import 'package:letmegoo/services/google_auth_service.dart';
 
 class AuthService {
   static const String baseUrl = 'https://dev-api.letmegoo.com/api';
@@ -20,6 +23,10 @@ class AuthService {
   static List<VehicleType>? _vehicleTypesCache;
   static DateTime? _cacheTimestamp;
   static const Duration cacheValidity = Duration(hours: 1);
+
+  // Debounce timer for vehicle search
+  static Timer? _debounceTimer;
+  static const Duration _debounceDuration = Duration(milliseconds: 500);
 
   /// Checks internet connectivity efficiently
   static Future<bool> _hasInternetConnection() async {
@@ -252,8 +259,8 @@ class AuthService {
         ),
       );
 
-      // Sign out from Firebase
-      await FirebaseAuth.instance.signOut();
+      // Sign out from both Firebase and Google
+      await GoogleAuthService.signOut();
 
       // Close loading dialog
       if (context.mounted) {
@@ -296,7 +303,7 @@ class AuthService {
   /// Alternative logout function that returns success/failure status
   static Future<bool> logoutWithStatus() async {
     try {
-      await FirebaseAuth.instance.signOut();
+      await GoogleAuthService.signOut();
       return true;
     } catch (e) {
       print('Logout error: $e');
@@ -679,6 +686,132 @@ class AuthService {
     return RegExp(
       r'^\+?[1-9]\d{1,14}$',
     ).hasMatch(phoneNumber.replaceAll(RegExp(r'[\s\-\(\)]'), ''));
+  }
+
+  /// Vehicle search with debouncing
+  static void searchVehiclesDebounced(
+    String query,
+    Function(List<VehicleSearchResult>) onSuccess,
+    Function(String) onError,
+  ) {
+    // Cancel previous timer
+    cancelDebouncedSearch();
+
+    _debounceTimer = Timer(_debounceDuration, () async {
+      try {
+        final results = await _searchVehicles(query);
+        onSuccess(results);
+      } catch (e) {
+        onError(e.toString());
+      }
+    });
+  }
+
+  /// Cancel debounced search
+  static void cancelDebouncedSearch() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+  }
+
+  /// Internal vehicle search method
+  static Future<List<VehicleSearchResult>> _searchVehicles(String query) async {
+    try {
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders();
+      
+      final uri = Uri.parse('$baseUrl/vehicle/search').replace(
+        queryParameters: {
+          'vehicle_number': query.trim(),
+          'limit': '10',
+          'offset': '0',
+        },
+      );
+
+      final response = await _httpClient
+          .get(uri, headers: headers)
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = json.decode(response.body);
+        return jsonList
+            .map((json) => VehicleSearchResult.fromJson(json))
+            .toList();
+      } else {
+        _handleHttpError(response);
+        return [];
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } catch (e) {
+      if (e is ApiException || e is ConnectivityException) {
+        rethrow;
+      }
+      throw ApiException('Vehicle search failed: $e');
+    }
+  }
+
+  /// Report a vehicle for blocking
+  static Future<Map<String, dynamic>> reportVehicle(ReportRequest request) async {
+    try {
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders();
+
+      var multipartRequest = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/vehicle/report'),
+      );
+
+      // Add headers (remove Content-Type as it's set automatically for multipart)
+      multipartRequest.headers.addAll({
+        'Accept': 'application/json',
+        'Authorization': headers['Authorization']!,
+      });
+
+      // Add form fields
+      multipartRequest.fields.addAll(request.toFormData());
+
+      // Add images if any
+      for (int i = 0; i < request.images.length; i++) {
+        final file = request.images[i];
+        if (await file.exists()) {
+          final imageFile = await http.MultipartFile.fromPath(
+            'images', // Use 'images' as the field name for multiple images
+            file.path,
+          );
+          multipartRequest.files.add(imageFile);
+        }
+      }
+
+      final streamedResponse = await multipartRequest.send().timeout(timeoutDuration);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        _handleHttpError(response);
+        throw ApiException('Report submission failed');
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } catch (e) {
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException ||
+          e is ValidationException) {
+        rethrow;
+      }
+      throw ApiException('Report vehicle failed: $e');
+    }
   }
 
   /// Clears cache (useful for testing or manual refresh)

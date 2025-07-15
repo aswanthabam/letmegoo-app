@@ -13,11 +13,11 @@ class Editvehicledialog extends StatefulWidget {
   final VoidCallback onDelete;
 
   const Editvehicledialog({
-    Key? key,
+    super.key,
     required this.vehicle,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<Editvehicledialog> createState() => _EditvehicledialogState();
@@ -213,7 +213,7 @@ class _EditvehicledialogState extends State<Editvehicledialog> {
                   ),
                 )
               else
-                Container(
+                SizedBox(
                   width: double.infinity,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +293,7 @@ class _EditvehicledialogState extends State<Editvehicledialog> {
               const SizedBox(height: 12),
 
               /// Fuel Type Dropdown
-              Container(
+              SizedBox(
                 width: double.infinity,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

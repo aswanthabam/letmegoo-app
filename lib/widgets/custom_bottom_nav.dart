@@ -12,6 +12,7 @@ class CustomBottomNav extends StatelessWidget {
     required this.onTap,
     required this.onInformPressed,
   });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -27,7 +28,6 @@ class CustomBottomNav extends StatelessWidget {
           ),
         ],
       ),
-
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20), // internal spacing
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -59,26 +59,53 @@ class CustomBottomNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: Icon(
-                    currentIndex == 0 ? Icons.home : Icons.home_outlined,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                  onPressed: () => onTap(0),
+                _buildNavItem(
+                  index: 0,
+                  selectedIcon: Icons.home,
+                  unselectedIcon: Icons.home_outlined,
+                  onTap: () => onTap(0),
                 ),
-                IconButton(
-                  icon: Icon(
-                    currentIndex == 1 ? Icons.person : Icons.person_outline,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                  onPressed: () => onTap(1),
+                _buildNavItem(
+                  index: 1,
+                  selectedIcon: Icons.person,
+                  unselectedIcon: Icons.person_outline,
+                  onTap: () => onTap(1),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData selectedIcon,
+    required IconData unselectedIcon,
+    required VoidCallback onTap,
+  }) {
+    final bool isSelected = currentIndex == index;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color:
+              isSelected
+                  ? AppColors.primary.withOpacity(0.1)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          isSelected ? selectedIcon : unselectedIcon,
+          color:
+              isSelected
+                  ? AppColors.primary
+                  : AppColors.primary.withOpacity(0.5),
+          size: 28,
+        ),
       ),
     );
   }

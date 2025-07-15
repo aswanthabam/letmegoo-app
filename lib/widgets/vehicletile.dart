@@ -13,7 +13,7 @@ class Vehicletile extends StatelessWidget {
   final VoidCallback onEdit;
 
   const Vehicletile({
-    Key? key,
+    super.key,
     required this.number,
     required this.type,
     required this.brand,
@@ -22,7 +22,7 @@ class Vehicletile extends StatelessWidget {
     this.isVerified = false,
     required this.onDelete,
     required this.onEdit,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

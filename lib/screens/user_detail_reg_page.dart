@@ -10,7 +10,7 @@ import 'package:letmegoo/services/auth_service.dart';
 class UserDetailRegPage extends StatefulWidget {
   final LoginMethod? loginMethod;
 
-  const UserDetailRegPage({Key? key, this.loginMethod}) : super(key: key);
+  const UserDetailRegPage({super.key, this.loginMethod});
 
   @override
   State<UserDetailRegPage> createState() => _UserDetailRegPageState();

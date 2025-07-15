@@ -1,73 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:letmegoo/constants/app_theme.dart';
-import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/models/vehicle.dart';
+import 'package:letmegoo/providers/vehicle_provider.dart';
+import 'package:letmegoo/providers/app_providers.dart';
+import 'package:letmegoo/providers/error_handler_provider.dart';
 import '../widgets/deletevehicledialog.dart';
 import '../widgets/editvehicledialog.dart';
 import '../widgets/addvehicledialog.dart';
 import '../widgets/vehicletile.dart';
 
-class MyVehiclesPage extends StatefulWidget {
+class MyVehiclesPage extends ConsumerStatefulWidget {
   const MyVehiclesPage({super.key});
 
   @override
-  State<MyVehiclesPage> createState() => _MyVehiclesPageState();
+  ConsumerState<MyVehiclesPage> createState() => _MyVehiclesPageState();
 }
 
-class _MyVehiclesPageState extends State<MyVehiclesPage> {
-  List<Vehicle> vehicles = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
+class _MyVehiclesPageState extends ConsumerState<MyVehiclesPage> {
   @override
   void initState() {
     super.initState();
-    _loadVehicles();
-  }
-
-  Future<void> _loadVehicles() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      print('Starting to load vehicles...');
-      final vehiclesList = await AuthService.getUserVehicles();
-      print('Received ${vehiclesList.length} vehicles');
-
-      setState(() {
-        vehicles = vehiclesList;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error in _loadVehicles: $e');
-      setState(() {
-        _isLoading = false;
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-      });
-    }
+    // Load vehicles data on initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(vehicleProvider.notifier).loadVehicles();
+    });
   }
 
   Future<void> _deleteVehicle(String vehicleId) async {
     try {
-      final bool success = await AuthService.deleteVehicle(vehicleId);
+      final bool success = await ref.read(vehicleProvider.notifier).deleteVehicle(vehicleId);
 
       if (success) {
         _showSnackBar('Vehicle deleted successfully', isError: false);
-        // Remove vehicle from local list
-        setState(() {
-          vehicles.removeWhere((vehicle) => vehicle.id == vehicleId);
-        });
       } else {
         _showSnackBar('Failed to delete vehicle', isError: true);
       }
     } catch (e) {
-      _showSnackBar('Error deleting vehicle: ${e.toString()}', isError: true);
+      // Use error handler for consistent error handling
+      ErrorHandler.handleError(ref, e, customMessage: 'Error deleting vehicle');
     }
   }
 
   void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
+
+    // Update global snackbar provider
+    ref.read(snackbarProvider.notifier).state = SnackbarMessage(
+      message: message,
+      isError: isError,
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -77,30 +60,15 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
     );
   }
 
-  // Helper method to extract vehicle type display value
-  String _getVehicleTypeDisplay(dynamic vehicleType) {
-    if (vehicleType == null) return 'Unknown';
-
-    if (vehicleType is String) {
-      // If it's already a string, return it
-      return vehicleType;
-    } else if (vehicleType is Map<String, dynamic>) {
-      // If it's a map like {"key":"car","value":"Car"}, extract the value
-      return vehicleType['value']?.toString() ??
-          vehicleType['key']?.toString() ??
-          'Unknown';
-    } else {
-      // Fallback to string representation
-      return vehicleType.toString();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isTablet = screenWidth > 600;
     final isLargeScreen = screenWidth > 900;
+
+    // Watch vehicle state
+    final vehicleState = ref.watch(vehicleProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -142,7 +110,9 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
       ),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadVehicles,
+          onRefresh: () async {
+            await ref.read(vehicleProvider.notifier).refreshVehicles();
+          },
           color: AppColors.primary,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -226,9 +196,9 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                           ),
                           SizedBox(height: screenHeight * 0.01),
                           Text(
-                            _isLoading
+                            vehicleState.isLoading
                                 ? 'Loading vehicles...'
-                                : '${vehicles.length} vehicle${vehicles.length != 1 ? 's' : ''} registered',
+                                : '${vehicleState.vehicles.length} vehicle${vehicleState.vehicles.length != 1 ? 's' : ''} registered',
                             style: AppFonts.regular14().copyWith(
                               color: AppColors.textSecondary,
                               fontSize:
@@ -247,11 +217,11 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                     SizedBox(height: screenHeight * 0.03),
 
                     // Content based on state
-                    if (_isLoading) ...[
+                    if (vehicleState.isLoading) ...[
                       _buildLoadingState(screenWidth, screenHeight),
-                    ] else if (_errorMessage != null) ...[
-                      _buildErrorState(screenWidth, screenHeight),
-                    ] else if (vehicles.isEmpty) ...[
+                    ] else if (vehicleState.errorMessage != null) ...[
+                      _buildErrorState(screenWidth, screenHeight, vehicleState.errorMessage!),
+                    ] else if (vehicleState.vehicles.isEmpty) ...[
                       _buildEmptyState(screenWidth, screenHeight),
                     ] else ...[
                       _buildVehiclesList(
@@ -259,6 +229,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                         screenHeight,
                         isTablet,
                         isLargeScreen,
+                        vehicleState.vehicles,
                       ),
                     ],
                   ],
@@ -272,7 +243,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
   }
 
   Widget _buildLoadingState(double screenWidth, double screenHeight) {
-    return Container(
+    return SizedBox(
       height: screenHeight * 0.4,
       child: Center(
         child: Column(
@@ -293,8 +264,8 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
     );
   }
 
-  Widget _buildErrorState(double screenWidth, double screenHeight) {
-    return Container(
+  Widget _buildErrorState(double screenWidth, double screenHeight, String errorMessage) {
+    return SizedBox(
       height: screenHeight * 0.4,
       child: Center(
         child: Column(
@@ -313,13 +284,13 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
             ),
             SizedBox(height: screenHeight * 0.01),
             Text(
-              _errorMessage!,
+              errorMessage,
               style: AppFonts.regular14(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: screenHeight * 0.03),
             ElevatedButton(
-              onPressed: _loadVehicles,
+              onPressed: () => ref.read(vehicleProvider.notifier).refreshVehicles(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
@@ -333,7 +304,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
   }
 
   Widget _buildEmptyState(double screenWidth, double screenHeight) {
-    return Container(
+    return SizedBox(
       height: screenHeight * 0.4,
       child: Center(
         child: Column(
@@ -378,6 +349,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
     double screenHeight,
     bool isTablet,
     bool isLargeScreen,
+    List<Vehicle> vehicles,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,9 +398,9 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                     ),
                     child: Vehicletile(
                       number: vehicle.vehicleNumber,
-                      type: _getVehicleTypeDisplay(
+                      type: ref.read(vehicleProvider.notifier).getVehicleTypeDisplay(
                         vehicle.vehicleType,
-                      ), // Updated to handle both formats
+                      ), // Updated to use provider method
                       brand: vehicle.brand ?? 'Unknown',
                       model: vehicle.name.isNotEmpty ? vehicle.name : 'Vehicle',
                       image: vehicle.imageUrl,
@@ -440,7 +412,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                 ),
               ),
             )
-            .toList(),
+            ,
       ],
     );
   }
@@ -455,7 +427,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
               Navigator.pop(context);
               _showSnackBar('Vehicle added successfully!', isError: false);
               // Refresh the vehicles list
-              _loadVehicles();
+              ref.read(vehicleProvider.notifier).refreshVehicles();
             },
             onCancel: () {
               Navigator.pop(context);
@@ -489,7 +461,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
               Navigator.pop(context);
               _showSnackBar('Vehicle updated successfully!', isError: false);
               // Refresh the vehicles list
-              _loadVehicles();
+              ref.read(vehicleProvider.notifier).refreshVehicles();
             },
             onDelete: () {
               Navigator.pop(context);

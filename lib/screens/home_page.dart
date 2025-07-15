@@ -9,10 +9,10 @@ class HomePage extends StatelessWidget {
   final VoidCallback onAddPressed;
 
   const HomePage({
-    Key? key,
+    super.key,
     required this.onNavigate,
     required this.onAddPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -125,118 +125,112 @@ class HomePage extends StatelessWidget {
       body: MediaQuery.removePadding(
         context: context,
         removeBottom: true,
-        child: Stack(
-          children: [
-            // Main Content
-            SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: screenWidth * 0.02,
-                right: screenWidth * 0.02,
-                top: screenHeight * 0.05,
-                bottom: screenHeight * 0.12,
-              ),
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: isLargeScreen ? 900 : double.infinity,
-                ),
-                child:
-                    allReportsEmpty
-                        ? SizedBox(
-                          height: screenHeight * 0.88,
-                          width: double.infinity,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  'assets/images/Empty.png',
-                                  width: screenWidth * 0.7,
-                                  fit: BoxFit.contain,
-                                ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Main Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxWidth: isLargeScreen ? 900 : double.infinity,
+                    ),
+                    child:
+                        allReportsEmpty
+                            ? SizedBox(
+                              height: screenHeight * 0.88,
+                              width: double.infinity,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/Empty.png',
+                                      width: screenWidth * 0.7,
+                                      fit: BoxFit.contain,
+                                    ),
 
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No reportings made by you or against you',
-                                  style: AppFonts.bold16(),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No reportings made by you or against you',
+                                      style: AppFonts.bold16(),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                            )
+                            : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (liveReportingsByYou.isNotEmpty) ...[
+                                  buildReportSection(
+                                    context: context,
+                                    title:
+                                        "Live Reportings By You (${liveReportingsByYou.length})",
+                                    reports: liveReportingsByYou,
+                                    screenWidth: screenWidth,
+                                    isTablet: isTablet,
+                                    isLargeScreen: isLargeScreen,
+                                  ),
+                                  SizedBox(height: screenHeight * 0.02),
+                                  buildDivider(screenWidth),
+                                  SizedBox(height: screenHeight * 0.02),
+                                ],
+                                if (liveReportingsAgainstYou.isNotEmpty) ...[
+                                  buildReportSection(
+                                    context: context,
+                                    title:
+                                        "Live Reportings Against You (${liveReportingsAgainstYou.length})",
+                                    reports: liveReportingsAgainstYou,
+                                    screenWidth: screenWidth,
+                                    isTablet: isTablet,
+                                    isLargeScreen: isLargeScreen,
+                                  ),
+                                  SizedBox(height: screenHeight * 0.02),
+                                  buildDivider(screenWidth),
+                                  SizedBox(height: screenHeight * 0.02),
+                                ],
+                                if (solvedReportingsByYou.isNotEmpty) ...[
+                                  buildReportSection(
+                                    context: context,
+                                    title:
+                                        "Solved Reportings By You (${solvedReportingsByYou.length})",
+                                    reports: solvedReportingsByYou,
+                                    screenWidth: screenWidth,
+                                    isTablet: isTablet,
+                                    isLargeScreen: isLargeScreen,
+                                  ),
+                                  SizedBox(height: screenHeight * 0.02),
+                                  buildDivider(screenWidth),
+                                  SizedBox(height: screenHeight * 0.02),
+                                ],
+                                if (solvedReportingsAgainstYou.isNotEmpty) ...[
+                                  buildReportSection(
+                                    context: context,
+                                    title:
+                                        "Solved Reportings Against You (${solvedReportingsAgainstYou.length})",
+                                    reports: solvedReportingsAgainstYou,
+                                    screenWidth: screenWidth,
+                                    isTablet: isTablet,
+                                    isLargeScreen: isLargeScreen,
+                                  ),
+                                ],
+                                SizedBox(height: screenHeight * 0.02),
                               ],
                             ),
-                          ),
-                        )
-                        : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (liveReportingsByYou.isNotEmpty) ...[
-                              buildReportSection(
-                                context: context,
-                                title:
-                                    "Live Reportings By You (${liveReportingsByYou.length})",
-                                reports: liveReportingsByYou,
-                                screenWidth: screenWidth,
-                                isTablet: isTablet,
-                                isLargeScreen: isLargeScreen,
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              buildDivider(screenWidth),
-                              SizedBox(height: screenHeight * 0.02),
-                            ],
-                            if (liveReportingsAgainstYou.isNotEmpty) ...[
-                              buildReportSection(
-                                context: context,
-                                title:
-                                    "Live Reportings Against You (${liveReportingsAgainstYou.length})",
-                                reports: liveReportingsAgainstYou,
-                                screenWidth: screenWidth,
-                                isTablet: isTablet,
-                                isLargeScreen: isLargeScreen,
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              buildDivider(screenWidth),
-                              SizedBox(height: screenHeight * 0.02),
-                            ],
-                            if (solvedReportingsByYou.isNotEmpty) ...[
-                              buildReportSection(
-                                context: context,
-                                title:
-                                    "Solved Reportings By You (${solvedReportingsByYou.length})",
-                                reports: solvedReportingsByYou,
-                                screenWidth: screenWidth,
-                                isTablet: isTablet,
-                                isLargeScreen: isLargeScreen,
-                              ),
-                              SizedBox(height: screenHeight * 0.02),
-                              buildDivider(screenWidth),
-                              SizedBox(height: screenHeight * 0.02),
-                            ],
-                            if (solvedReportingsAgainstYou.isNotEmpty) ...[
-                              buildReportSection(
-                                context: context,
-                                title:
-                                    "Solved Reportings Against You (${solvedReportingsAgainstYou.length})",
-                                reports: solvedReportingsAgainstYou,
-                                screenWidth: screenWidth,
-                                isTablet: isTablet,
-                                isLargeScreen: isLargeScreen,
-                              ),
-                            ],
-                            SizedBox(height: screenHeight * 0.02),
-                          ],
-                        ),
+                  ),
+                ),
               ),
-            ),
 
-            // Bottom Navigation
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: CustomBottomNav(
+              // Bottom Navigation
+              CustomBottomNav(
                 currentIndex: 0,
                 onTap: onNavigate,
                 onInformPressed: onAddPressed,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

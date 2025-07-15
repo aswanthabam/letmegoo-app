@@ -7,11 +7,11 @@ class Deletevehicledialog extends StatefulWidget {
   final VoidCallback onDelete;
 
   const Deletevehicledialog({
-    Key? key,
+    super.key,
     this.vehicleName,
     this.vehicleNumber,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<Deletevehicledialog> createState() => _DeletevehicledialogState();

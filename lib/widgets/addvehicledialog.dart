@@ -13,10 +13,10 @@ class Addvehicledialog extends StatefulWidget {
   final VoidCallback onCancel;
 
   const Addvehicledialog({
-    Key? key,
+    super.key,
     required this.onAdd,
     required this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<Addvehicledialog> createState() => _AddvehicledialogState();
@@ -191,7 +191,7 @@ class _AddvehicledialogState extends State<Addvehicledialog> {
                   ),
                 )
               else
-                Container(
+                SizedBox(
                   width: double.infinity,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,7 +285,7 @@ class _AddvehicledialogState extends State<Addvehicledialog> {
               const SizedBox(height: 12),
 
               /// Fuel Type Dropdown
-              Container(
+              SizedBox(
                 width: double.infinity,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

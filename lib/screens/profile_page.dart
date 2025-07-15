@@ -1,8 +1,11 @@
-// lib/pages/profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/screens/my_vehicles_page.dart';
 import 'package:letmegoo/screens/privacy_preferences_page.dart';
+import 'package:letmegoo/providers/user_provider.dart';
+import 'package:letmegoo/providers/app_providers.dart';
+import 'package:letmegoo/providers/app_state_provider.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import '../../widgets/profileoption.dart';
 import '../../widgets/usertile.dart';
@@ -10,69 +13,45 @@ import '../../widgets/custom_bottom_nav.dart';
 import '../widgets/sectionheader.dart';
 import '../widgets/Customdivider.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   final Function(int) onNavigate;
   final VoidCallback onAddPressed;
 
   const ProfilePage({
-    Key? key,
+    super.key,
     required this.onNavigate,
     required this.onAddPressed,
-  }) : super(key: key);
+  });
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
-  Map<String, dynamic>? currentUser;
-  bool _isLoading = true;
-  String? _errorMessage;
-
+class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    // Load user data on initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userProvider.notifier).loadUserData();
+    });
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
-      final userData = await AuthService.authenticateUser();
-
-      setState(() {
-        currentUser = userData;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  // Helper method to get user initials
-  String _getUserInitials() {
-    if (currentUser == null) return 'U';
-    final fullname = currentUser!['fullname']?.toString() ?? '';
-    if (fullname.isEmpty) return 'U';
-
-    final names = fullname.trim().split(' ');
-    if (names.length == 1) {
-      return names[0].isNotEmpty ? names[0][0].toUpperCase() : 'U';
-    } else {
-      return ((names[0].isNotEmpty ? names[0][0] : '') +
-              (names[1].isNotEmpty ? names[1][0] : ''))
-          .toUpperCase();
-    }
+  @override
+  void dispose() {
+    // Cancel any ongoing operations or timers here if needed
+    super.dispose();
   }
 
   void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
+
+    // Update global snackbar provider
+    ref.read(snackbarProvider.notifier).state = SnackbarMessage(
+      message: message,
+      isError: isError,
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -90,276 +69,108 @@ class _ProfilePageState extends State<ProfilePage> {
     final isTablet = screenWidth > 600;
     final isLargeScreen = screenWidth > 900;
 
+    // Watch user state
+    final userState = ref.watch(userProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: MediaQuery.removePadding(
         context: context,
         removeBottom: true,
-        child: Stack(
+        child: Column(
           children: [
             // Main Content
-            Column(
-              children: [
-                // Enhanced Custom App Bar
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.05,
-                    vertical: screenHeight * 0.02,
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.05,
+                vertical: screenHeight * 0.02,
+              ),
+              child: Row(
+                children: [
+                  SizedBox(width: screenWidth * 0.02),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        "Profile",
+                        style: AppFonts.bold20().copyWith(
+                          fontSize:
+                              screenWidth *
+                              (isLargeScreen
+                                  ? 0.022
+                                  : isTablet
+                                  ? 0.032
+                                  : 0.05),
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      SizedBox(width: screenWidth * 0.02),
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            "Profile",
-                            style: AppFonts.bold20().copyWith(
-                              fontSize:
-                                  screenWidth *
-                                  (isLargeScreen
-                                      ? 0.022
-                                      : isTablet
-                                      ? 0.032
-                                      : 0.05),
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                ],
+              ),
+            ),
+
+            // Scrollable Content
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await ref.read(userProvider.notifier).refreshUserData();
+                },
+                color: AppColors.primary,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxWidth: isLargeScreen ? 600 : double.infinity,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // User Profile Card with Loading State
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
+                          padding: EdgeInsets.all(screenWidth * 0.04),
+                          child: _buildUserTile(),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
 
-                // Scrollable Content
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadUserData,
-                    color: AppColors.primary,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.only(
-                        left: screenWidth * 0.05,
-                        right: screenWidth * 0.05,
-                        top: screenHeight * 0.025,
-                        bottom: screenHeight * 0.12, // Space for bottom nav
-                      ),
-                      child: Container(
-                        constraints: BoxConstraints(
-                          maxWidth: isLargeScreen ? 600 : double.infinity,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // User Profile Card with Loading State
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+                        SizedBox(height: screenHeight * 0.035),
+
+                        // Account Settings Section
+                        const SectionHeader(title: "Account Settings"),
+
+                        SizedBox(height: screenHeight * 0.015),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
-                              padding: EdgeInsets.all(screenWidth * 0.04),
-                              child: _buildUserTile(),
-                            ),
-
-                            SizedBox(height: screenHeight * 0.035),
-
-                            // Account Settings Section
-                            const SectionHeader(title: "Account Settings"),
-
-                            SizedBox(height: screenHeight * 0.015),
-
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Profileoption(
-                                    icon: Icons.lock_outline,
-                                    title: "Privacy Preference",
-                                    trailing: Icon(
-                                      Icons.chevron_right,
-                                      color: AppColors.textSecondary,
-                                      size:
-                                          screenWidth *
-                                          (isLargeScreen
-                                              ? 0.025
-                                              : isTablet
-                                              ? 0.035
-                                              : 0.06),
-                                    ),
-                                    onTap: () {
-                                      if (currentUser != null) {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (
-                                                  context,
-                                                ) => PrivacyPreferencesPage(
-                                                  currentPreference:
-                                                      currentUser!['privacy_preference']
-                                                          ?.toString() ??
-                                                      'private',
-                                                  onPreferenceChanged: (
-                                                    newPreference,
-                                                  ) {
-                                                    setState(() {
-                                                      currentUser!['privacy_preference'] =
-                                                          newPreference;
-                                                    });
-                                                    _showSnackBar(
-                                                      'Privacy preference updated successfully!',
-                                                      isError: false,
-                                                    );
-                                                  },
-                                                ),
-                                          ),
-                                        );
-                                      } else {
-                                        _showSnackBar(
-                                          'Please wait for profile to load',
-                                          isError: true,
-                                        );
-                                      }
-                                    },
-                                  ),
-
-                                  CustomDivider(screenWidth: screenWidth),
-
-                                  Profileoption(
-                                    icon: Icons.directions_car_outlined,
-                                    title: "My Vehicles",
-                                    trailing: Icon(
-                                      Icons.chevron_right,
-                                      color: AppColors.textSecondary,
-                                      size:
-                                          screenWidth *
-                                          (isLargeScreen
-                                              ? 0.025
-                                              : isTablet
-                                              ? 0.035
-                                              : 0.06),
-                                    ),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) =>
-                                                  const MyVehiclesPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            SizedBox(height: screenHeight * 0.035),
-
-                            // Support & Legal Section
-                            SectionHeader(title: "Support & Legal"),
-
-                            SizedBox(height: screenHeight * 0.015),
-
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Profileoption(
-                                    icon: Icons.help_outline,
-                                    title: "Customer Support",
-                                    trailing: Icon(
-                                      Icons.chevron_right,
-                                      color: AppColors.textSecondary,
-                                      size:
-                                          screenWidth *
-                                          (isLargeScreen
-                                              ? 0.025
-                                              : isTablet
-                                              ? 0.035
-                                              : 0.06),
-                                    ),
-                                    onTap: () {
-                                      // Handle customer support
-                                    },
-                                  ),
-
-                                  CustomDivider(screenWidth: screenWidth),
-
-                                  Profileoption(
-                                    icon: Icons.shield_outlined,
-                                    title: "Privacy Policy",
-                                    trailing: Icon(
-                                      Icons.chevron_right,
-                                      color: AppColors.textSecondary,
-                                      size:
-                                          screenWidth *
-                                          (isLargeScreen
-                                              ? 0.025
-                                              : isTablet
-                                              ? 0.035
-                                              : 0.06),
-                                    ),
-                                    onTap: () {
-                                      // Handle privacy policy
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            SizedBox(height: screenHeight * 0.035),
-
-                            // Danger Zone Section
-                            const SectionHeader(title: "Danger Zone"),
-
-                            SizedBox(height: screenHeight * 0.015),
-
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Profileoption(
-                                icon: Icons.delete_outline,
-                                title: "Delete Account",
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Profileoption(
+                                icon: Icons.lock_outline,
+                                title: "Privacy Preference",
                                 trailing: Icon(
                                   Icons.chevron_right,
-                                  color: AppColors.darkRed.withOpacity(0.7),
+                                  color: AppColors.textSecondary,
                                   size:
                                       screenWidth *
                                       (isLargeScreen
@@ -369,91 +180,245 @@ class _ProfilePageState extends State<ProfilePage> {
                                           : 0.06),
                                 ),
                                 onTap: () {
-                                  _showDeleteAccountDialog(context);
+                                  if (userState.userData != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => PrivacyPreferencesPage(
+                                              currentPreference:
+                                                  userState.userData!['privacy_preference']
+                                                      ?.toString() ??
+                                                  'private',
+                                              onPreferenceChanged: (
+                                                newPreference,
+                                              ) {
+                                                if (mounted) {
+                                                  ref.read(userProvider.notifier).updatePrivacyPreference(newPreference);
+                                                  _showSnackBar(
+                                                    'Privacy preference updated successfully!',
+                                                    isError: false,
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                      ),
+                                    );
+                                  } else {
+                                    _showSnackBar(
+                                      'Please wait for profile to load',
+                                      isError: true,
+                                    );
+                                  }
                                 },
                               ),
-                            ),
 
-                            SizedBox(height: screenHeight * 0.04),
+                              CustomDivider(screenWidth: screenWidth),
 
-                            // Enhanced Logout Button
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppColors.darkRed.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: TextButton.icon(
-                                onPressed: () => _showLogoutDialog(context),
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: screenHeight * 0.018,
-                                    horizontal: screenWidth * 0.04,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                icon: Icon(
-                                  Icons.logout_outlined,
-                                  color: AppColors.darkRed,
+                              Profileoption(
+                                icon: Icons.directions_car_outlined,
+                                title: "My Vehicles",
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textSecondary,
                                   size:
                                       screenWidth *
                                       (isLargeScreen
                                           ? 0.025
                                           : isTablet
                                           ? 0.035
-                                          : 0.055),
+                                          : 0.06),
                                 ),
-                                label: Text(
-                                  "Log Out",
-                                  style: AppFonts.regular20(
-                                    color: AppColors.darkRed,
-                                  ).copyWith(
-                                    fontSize:
-                                        screenWidth *
-                                        (isLargeScreen
-                                            ? 0.018
-                                            : isTablet
-                                            ? 0.028
-                                            : 0.042),
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => const MyVehiclesPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: screenHeight * 0.035),
+
+                        // Support & Legal Section
+                        SectionHeader(title: "Support & Legal"),
+
+                        SizedBox(height: screenHeight * 0.015),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Profileoption(
+                                icon: Icons.help_outline,
+                                title: "Customer Support",
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textSecondary,
+                                  size:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.025
+                                          : isTablet
+                                          ? 0.035
+                                          : 0.06),
                                 ),
+                                onTap: () {
+                                  // Handle customer support
+                                },
+                              ),
+
+                              CustomDivider(screenWidth: screenWidth),
+
+                              Profileoption(
+                                icon: Icons.shield_outlined,
+                                title: "Privacy Policy",
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textSecondary,
+                                  size:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.025
+                                          : isTablet
+                                          ? 0.035
+                                          : 0.06),
+                                ),
+                                onTap: () {
+                                  // Handle privacy policy
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: screenHeight * 0.035),
+
+                        // Danger Zone Section
+                        const SectionHeader(title: "Danger Zone"),
+
+                        SizedBox(height: screenHeight * 0.015),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Profileoption(
+                            icon: Icons.delete_outline,
+                            title: "Delete Account",
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              color: AppColors.darkRed.withOpacity(0.7),
+                              size:
+                                  screenWidth *
+                                  (isLargeScreen
+                                      ? 0.025
+                                      : isTablet
+                                      ? 0.035
+                                      : 0.06),
+                            ),
+                            onTap: () {
+                              _showDeleteAccountDialog(context);
+                            },
+                          ),
+                        ),
+
+                        SizedBox(height: screenHeight * 0.04),
+
+                        // Enhanced Logout Button
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.darkRed.withOpacity(0.3),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextButton.icon(
+                            onPressed: () => _showLogoutDialog(context),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                vertical: screenHeight * 0.018,
+                                horizontal: screenWidth * 0.04,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-
-                            SizedBox(height: screenHeight * 0.03),
-                          ],
+                            icon: Icon(
+                              Icons.logout_outlined,
+                              color: AppColors.darkRed,
+                              size:
+                                  screenWidth *
+                                  (isLargeScreen
+                                      ? 0.025
+                                      : isTablet
+                                      ? 0.035
+                                      : 0.055),
+                            ),
+                            label: Text(
+                              "Log Out",
+                              style: AppFonts.regular20(
+                                color: AppColors.darkRed,
+                              ).copyWith(
+                                fontSize:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.018
+                                        : isTablet
+                                        ? 0.028
+                                        : 0.042),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+
+                        SizedBox(height: screenHeight * 0.03),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
 
-            // Bottom Navigation
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: CustomBottomNav(
-                currentIndex: 0,
-                onTap: widget.onNavigate,
-                onInformPressed: () {
-                  // Your action here
-                },
-              ),
+            // Bottom Navigation - FIXED: Changed currentIndex from 0 to 1
+            CustomBottomNav(
+              currentIndex: 1, // This was the issue! Changed from 0 to 1
+              onTap: widget.onNavigate,
+              onInformPressed: widget.onAddPressed,
             ),
           ],
         ),
@@ -462,8 +427,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildUserTile() {
-    if (_isLoading) {
-      return Container(
+    final userState = ref.watch(userProvider);
+    
+    if (userState.isLoading) {
+      return SizedBox(
         height: 80,
         child: Center(
           child: Row(
@@ -488,7 +455,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
-    if (_errorMessage != null) {
+    if (userState.errorMessage != null) {
       return Container(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -501,13 +468,13 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             SizedBox(height: 4),
             Text(
-              _errorMessage!,
+              userState.errorMessage!,
               style: AppFonts.regular14(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 12),
             ElevatedButton(
-              onPressed: _loadUserData,
+              onPressed: () => ref.read(userProvider.notifier).refreshUserData(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
@@ -519,8 +486,8 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
-    if (currentUser == null) {
-      return Container(
+    if (userState.userData == null) {
+      return SizedBox(
         height: 80,
         child: Center(
           child: Text(
@@ -532,15 +499,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Usertile(
-      initials: _getUserInitials(),
-      name: currentUser!['fullname']?.toString() ?? 'Unknown User',
-      email: currentUser!['email']?.toString() ?? 'No email',
-      phone: currentUser!['phone_number']?.toString() ?? 'No phone',
-      image: currentUser!['profile_picture']?.toString(),
+      initials: ref.read(userProvider.notifier).getUserInitials(),
+      name: ref.read(userProvider.notifier).getDisplayName(),
+      email: ref.read(userProvider.notifier).getEmail(),
+      phone: ref.read(userProvider.notifier).getPhone(),
+      image: ref.read(userProvider.notifier).getProfilePicture(),
     );
   }
 
-  // ... (rest of your dialog methods remain the same as in your original code)
   void _showLogoutDialog(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600;
@@ -644,6 +610,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: TextButton(
                     onPressed: () {
                       Navigator.pop(context);
+                      // Use app state provider to clear all data
+                      ref.read(appStateProvider.notifier).logout(ref);
+                      // Call AuthService logout
                       AuthService.logout(context);
                       _showSnackBar('Logged out successfully', isError: false);
                     },

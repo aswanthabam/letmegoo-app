@@ -8,10 +8,10 @@ class PrivacyPreferencesPage extends StatefulWidget {
   final Function(String) onPreferenceChanged;
 
   const PrivacyPreferencesPage({
-    Key? key,
+    super.key,
     required this.currentPreference,
     required this.onPreferenceChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<PrivacyPreferencesPage> createState() => _PrivacyPreferencesPageState();
@@ -290,7 +290,7 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
                 ),
                 child:
                     _isLoading
-                        ? Container(
+                        ? SizedBox(
                           height: 50,
                           child: Center(
                             child: CircularProgressIndicator(

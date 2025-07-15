@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:letmegoo/screens/splash_screen.dart';
 import 'package:letmegoo/screens/login_page.dart';
@@ -14,7 +15,7 @@ void main() async {
       options:
           DefaultFirebaseOptions.currentPlatform, // Generated Firebase options
     );
-    runApp(const MyApp());
+    runApp(ProviderScope(child: const MyApp()));
   } catch (e) {
     print("Error initializing Firebase: $e");
     // Optionally, show an error screen or fallback
