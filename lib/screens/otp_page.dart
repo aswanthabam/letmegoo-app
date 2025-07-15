@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/models/login_method.dart';
+import 'package:letmegoo/models/user_model.dart';
+import 'package:letmegoo/screens/user_detail_reg_page.dart';
 import 'package:letmegoo/screens/welcome_page.dart';
+import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/widgets/commonbutton.dart';
+import 'package:letmegoo/widgets/main_app.dart';
 
 class OtpPage extends StatefulWidget {
   final String verificationId;
@@ -11,11 +16,11 @@ class OtpPage extends StatefulWidget {
   final int? resendToken;
 
   const OtpPage({
-    super.key,
+    Key? key,
     required this.verificationId,
     required this.phoneNumber,
     this.resendToken,
-  });
+  }) : super(key: key);
 
   @override
   State<OtpPage> createState() => _OtpPageState();
@@ -79,11 +84,8 @@ class _OtpPageState extends State<OtpPage> {
       if (userCredential.user != null) {
         _showSnackBar("Phone number verified successfully!", isError: false);
 
-        // Navigate to welcome page or main app
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const WelcomePage()),
-        );
+        // Apply the same validation logic as splash screen
+        await _checkUserProfileAndNavigate();
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -135,6 +137,40 @@ class _OtpPageState extends State<OtpPage> {
     }
   }
 
+  Future<void> _checkUserProfileAndNavigate() async {
+    try {
+      // Check if user profile is complete via API
+      final userData = await AuthService.authenticateUser();
+
+      if (userData != null) {
+        // Parse user data using UserModel (same as splash screen)
+        final UserModel userModel = UserModel.fromJson(userData);
+
+        // Apply the same validation logic as splash screen
+        if (userModel.fullname != "Unknown User" &&
+            userModel.phoneNumber != null) {
+          // User has complete profile, navigate to main app
+          _navigateToMainApp();
+        } else {
+          // User needs to complete profile, navigate to user details
+          _navigateToUserDetails();
+        }
+      } else {
+        // User doesn't exist in backend, navigate to welcome/user details
+        _navigateToWelcome();
+      }
+    } catch (e) {
+      // API call failed, but phone verification succeeded
+      // Navigate to welcome page to complete setup
+      _navigateToWelcome();
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Also update the _signInWithCredential method
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
     try {
       final UserCredential userCredential = await _auth.signInWithCredential(
@@ -142,14 +178,34 @@ class _OtpPageState extends State<OtpPage> {
       );
       if (userCredential.user != null) {
         _showSnackBar("Phone number verified successfully!", isError: false);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const WelcomePage()),
-        );
+
+        // Apply the same validation logic as splash screen
+        await _checkUserProfileAndNavigate();
       }
     } catch (e) {
       _showSnackBar("Verification failed. Please try again.", isError: true);
     }
+  }
+
+  // Add navigation methods
+  void _navigateToMainApp() {
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp()));
+  }
+
+  void _navigateToWelcome() {
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const WelcomePage()));
+  }
+
+  void _navigateToUserDetails() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => UserDetailRegPage(loginMethod: LoginMethod.phone),
+      ),
+    );
   }
 
   void _handleVerificationError(FirebaseAuthException e) {
@@ -367,7 +423,7 @@ class _OtpPageState extends State<OtpPage> {
                             SizedBox(height: screenHeight * 0.03),
 
                             // Resend OTP Section
-                            SizedBox(
+                            Container(
                               width:
                                   screenWidth *
                                   (isLargeScreen

@@ -23,95 +23,95 @@ class HomePage extends StatelessWidget {
 
     // Dummy Data
     final List<Map<String, dynamic>> liveReportingsByYou = [
-      {
-        'timeDate': '16:30 | 23rd July 2025',
-        'status': 'Active',
-        'location': 'Parking Lot A, Technopark',
-        'message': 'Vehicle blocking emergency exit. Please move immediately.',
-        'reporter': 'Reported By you',
-        'profileImage': null,
-      },
-      {
-        'timeDate': '14:15 | 23rd July 2025',
-        'status': 'Active',
-        'location': 'Main Gate, Campus B',
-        'message': 'Unauthorized parking in handicap zone.',
-        'reporter': 'Reported By you',
-        'profileImage': null,
-      },
+      // {
+      //   'timeDate': '16:30 | 23rd July 2025',
+      //   'status': 'Active',
+      //   'location': 'Parking Lot A, Technopark',
+      //   'message': 'Vehicle blocking emergency exit. Please move immediately.',
+      //   'reporter': 'Reported By you',
+      //   'profileImage': null,
+      // },
+      // {
+      //   'timeDate': '14:15 | 23rd July 2025',
+      //   'status': 'Active',
+      //   'location': 'Main Gate, Campus B',
+      //   'message': 'Unauthorized parking in handicap zone.',
+      //   'reporter': 'Reported By you',
+      //   'profileImage': null,
+      // },
     ];
 
     final List<Map<String, dynamic>> liveReportingsAgainstYou = [
-      {
-        'timeDate': '15:47 | 23rd July 2025',
-        'status': 'Active',
-        'location': 'Thejaswini, Phase 1, Technopark',
-        'message': 'Car is blocking path. Take care of it. Its URGE...',
-        'reporter': 'Reported By someone anonymous',
-        'profileImage': null,
-      },
+      // {
+      //   'timeDate': '15:47 | 23rd July 2025',
+      //   'status': 'Active',
+      //   'location': 'Thejaswini, Phase 1, Technopark',
+      //   'message': 'Car is blocking path. Take care of it. Its URGE...',
+      //   'reporter': 'Reported By someone anonymous',
+      //   'profileImage': null,
+      // },
     ];
 
     final List<Map<String, dynamic>> solvedReportingsByYou = [
-      {
-        'timeDate': '12:20 | 22nd July 2025',
-        'status': 'Solved',
-        'location': 'Visitor Parking, Phase 2',
-        'message': 'Double parking issue resolved.',
-        'reporter': 'Reported By you',
-        'profileImage': null,
-      },
-      {
-        'timeDate': '09:45 | 21st July 2025',
-        'status': 'Solved',
-        'location': 'Food Court Area',
-        'message': 'Vehicle parked in no-parking zone.',
-        'reporter': 'Reported By you',
-        'profileImage': null,
-      },
-      {
-        'timeDate': '18:30 | 20th July 2025',
-        'status': 'Solved',
-        'location': 'Library Parking',
-        'message': 'Motorcycle blocking walkway.',
-        'reporter': 'Reported By you',
-        'profileImage': null,
-      },
+      // {
+      //   'timeDate': '12:20 | 22nd July 2025',
+      //   'status': 'Solved',
+      //   'location': 'Visitor Parking, Phase 2',
+      //   'message': 'Double parking issue resolved.',
+      //   'reporter': 'Reported By you',
+      //   'profileImage': null,
+      // },
+      // {
+      //   'timeDate': '09:45 | 21st July 2025',
+      //   'status': 'Solved',
+      //   'location': 'Food Court Area',
+      //   'message': 'Vehicle parked in no-parking zone.',
+      //   'reporter': 'Reported By you',
+      //   'profileImage': null,
+      // },
+      // {
+      //   'timeDate': '18:30 | 20th July 2025',
+      //   'status': 'Solved',
+      //   'location': 'Library Parking',
+      //   'message': 'Motorcycle blocking walkway.',
+      //   'reporter': 'Reported By you',
+      //   'profileImage': null,
+      // },
     ];
 
     final List<Map<String, dynamic>> solvedReportingsAgainstYou = [
-      {
-        'timeDate': '18:20 | 22nd July 2025',
-        'status': 'Solved',
-        'location': 'In front of Park Centre',
-        'message': 'Scooter parked wrongly. Needs to be moved.',
-        'reporter': 'Reported By security staff',
-        'profileImage': null,
-      },
-      {
-        'timeDate': '17:05 | 21st July 2025',
-        'status': 'Solved',
-        'location': 'Main Gate, Campus B',
-        'message': 'Unauthorized parking under tree area.',
-        'reporter': 'Reported By facility team',
-        'profileImage': null,
-      },
-      {
-        'timeDate': '14:30 | 19th July 2025',
-        'status': 'Solved',
-        'location': 'Parking Lot 3',
-        'message': 'Vehicle parked across two slots.',
-        'reporter': 'Reported By anonymous',
-        'profileImage': null,
-      },
-      {
-        'timeDate': '11:15 | 18th July 2025',
-        'status': 'Solved',
-        'location': 'Reception Area',
-        'message': 'Car blocking entrance door.',
-        'reporter': 'Reported By reception staff',
-        'profileImage': null,
-      },
+      // {
+      //   'timeDate': '18:20 | 22nd July 2025',
+      //   'status': 'Solved',
+      //   'location': 'In front of Park Centre',
+      //   'message': 'Scooter parked wrongly. Needs to be moved.',
+      //   'reporter': 'Reported By security staff',
+      //   'profileImage': null,
+      // },
+      // {
+      //   'timeDate': '17:05 | 21st July 2025',
+      //   'status': 'Solved',
+      //   'location': 'Main Gate, Campus B',
+      //   'message': 'Unauthorized parking under tree area.',
+      //   'reporter': 'Reported By facility team',
+      //   'profileImage': null,
+      // },
+      // {
+      //   'timeDate': '14:30 | 19th July 2025',
+      //   'status': 'Solved',
+      //   'location': 'Parking Lot 3',
+      //   'message': 'Vehicle parked across two slots.',
+      //   'reporter': 'Reported By anonymous',
+      //   'profileImage': null,
+      // },
+      // {
+      //   'timeDate': '11:15 | 18th July 2025',
+      //   'status': 'Solved',
+      //   'location': 'Reception Area',
+      //   'message': 'Car blocking entrance door.',
+      //   'reporter': 'Reported By reception staff',
+      //   'profileImage': null,
+      // },
     ];
 
     final allReportsEmpty =
