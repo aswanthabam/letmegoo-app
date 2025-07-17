@@ -6,63 +6,15 @@ import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
-import 'package:letmegoo/models/vehicle_search_result.dart';
 import 'package:letmegoo/models/report_request.dart';
-import 'package:search_autocomplete/search_autocomplete.dart';
 
 // State Management with Riverpod
-final vehicleSearchProvider = StateNotifierProvider<
-  VehicleSearchNotifier,
-  AsyncValue<List<VehicleSearchResult>>
->((ref) {
-  return VehicleSearchNotifier();
-});
-
 final reportStateProvider = StateNotifierProvider<
   ReportStateNotifier,
   AsyncValue<Map<String, dynamic>?>
 >((ref) {
   return ReportStateNotifier();
 });
-
-class VehicleSearchNotifier
-    extends StateNotifier<AsyncValue<List<VehicleSearchResult>>> {
-  VehicleSearchNotifier() : super(const AsyncValue.data([]));
-
-  void searchVehiclesDebounced(String query) {
-    print(query);
-    if (query.isEmpty) {
-      state = const AsyncValue.data([]);
-      return;
-    }
-
-    state = const AsyncValue.loading();
-    AuthService.searchVehiclesDebounced(
-      query,
-      (results) {
-        if (mounted) {
-          state = AsyncValue.data(results);
-        }
-      },
-      (error) {
-        if (mounted) {
-          state = AsyncValue.error(error, StackTrace.current);
-        }
-      },
-    );
-  }
-
-  void clearSearch() {
-    AuthService.cancelDebouncedSearch();
-    state = const AsyncValue.data([]);
-  }
-
-  @override
-  void dispose() {
-    AuthService.cancelDebouncedSearch();
-    super.dispose();
-  }
-}
 
 class ReportStateNotifier
     extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
@@ -103,7 +55,6 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
   bool isAnonymous = true;
   List<File> _images = [];
-  String? selectedVehicleId;
 
   @override
   void initState() {
@@ -115,19 +66,6 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     regNumberController.dispose();
     messageController.dispose();
     super.dispose();
-  }
-
-  void _onVehicleSearch(String query) {
-    print("obj");
-    ref.read(vehicleSearchProvider.notifier).searchVehiclesDebounced(query);
-  }
-
-  void _onVehicleSelected(VehicleSearchResult vehicle) {
-    print("Selected Vehicle ==> ${vehicle.vehicleNumber}");
-    setState(() {
-      selectedVehicleId = vehicle.id;
-      regNumberController.text = vehicle.vehicleNumber;
-    });
   }
 
   Future<void> _pickImages() async {
@@ -218,17 +156,8 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
       return;
     }
 
-    if (selectedVehicleId == null) {
-      _showFullScreenDialog(
-        "Vehicle Not Registered",
-        "This vehicle is not registered with us. Please check the registration number and try again.",
-        isError: true,
-      );
-      return;
-    }
-
     final request = ReportRequest(
-      vehicleId: selectedVehicleId!,
+      vehicleId: regNumber, // Using registration number as vehicleId
       images: _images,
       isAnonymous: isAnonymous,
       notes: message,
@@ -381,232 +310,71 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           SizedBox(height: screenHeight * 0.04),
 
-                          // Registration Number Field with SearchAutocomplete
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final searchResults = ref.watch(
-                                vehicleSearchProvider,
-                              );
-
-                              // Get the current list of options from the state
-                              final options = searchResults.when(
-                                data: (vehicles) => vehicles,
-                                loading: () => <VehicleSearchResult>[],
-                                error:
-                                    (error, stackTrace) =>
-                                        <VehicleSearchResult>[],
-                              );
-
-                              return SearchAutocomplete<VehicleSearchResult>(
-                                options: options,
-                                initValue: null,
-
-                                getString: (vehicle) => vehicle.vehicleNumber,
-                                onSearch: _onVehicleSearch,
-                                onSelected: _onVehicleSelected,
-
-                                fieldBuilder: (
-                                  controller,
-                                  onFieldTap,
-                                  showDropdown,
-                                  onPressed,
-                                ) {
-                                  return TextFormField(
-                                    controller: regNumberController,
-                                    onTap: onFieldTap,
-                                    onChanged: (value) {
-                                      // This is what's missing!
-                                      print(value);
-                                      _onVehicleSearch(value);
-                                    },
-                                    style: TextStyle(
-                                      fontSize:
-                                          screenWidth *
-                                          (isLargeScreen
-                                              ? 0.016
-                                              : isTablet
-                                              ? 0.025
-                                              : 0.04),
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: "KL00AA0000",
-                                      hintStyle: TextStyle(
-                                        fontSize:
-                                            screenWidth *
-                                            (isLargeScreen
-                                                ? 0.014
-                                                : isTablet
-                                                ? 0.022
-                                                : 0.035),
-                                        color: AppColors.textSecondary
-                                            .withOpacity(0.6),
-                                      ),
-                                      labelText: "Registration Number",
-                                      labelStyle: TextStyle(
-                                        fontSize:
-                                            screenWidth *
-                                            (isLargeScreen
-                                                ? 0.014
-                                                : isTablet
-                                                ? 0.022
-                                                : 0.035),
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: BorderSide(
-                                          color: AppColors.textSecondary
-                                              .withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: BorderSide(
-                                          color: AppColors.textSecondary
-                                              .withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: BorderSide(
-                                          color: AppColors.primary,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: screenWidth * 0.04,
-                                        vertical: screenHeight * 0.02,
-                                      ),
-                                      suffixIcon: IconButton(
-                                        icon: Icon(
-                                          showDropdown
-                                              ? Icons.arrow_drop_up
-                                              : Icons.arrow_drop_down,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                        onPressed:
-                                            () => onPressed(showDropdown),
-                                      ),
-                                    ),
-                                  );
-                                },
-
-                                dropDownBuilder: (
-                                  options,
-                                  onSelected,
-                                  controller,
-                                ) {
-                                  if (searchResults.isLoading) {
-                                    return Container(
-                                      padding: const EdgeInsets.all(16.0),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: AppColors.textSecondary
-                                              .withOpacity(0.3),
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.1,
-                                            ),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    );
-                                  }
-
-                                  return Container(
-                                    constraints: const BoxConstraints(
-                                      maxHeight: 200,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: AppColors.textSecondary
-                                            .withOpacity(0.3),
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ListView.builder(
-                                      shrinkWrap: true,
-                                      itemCount: options.length,
-                                      itemBuilder: (context, index) {
-                                        final vehicle = options[index];
-                                        return ListTile(
-                                          title: Text(
-                                            vehicle.vehicleNumber,
-                                            style: AppFonts.semiBold16(),
-                                          ),
-                                          subtitle: Text(
-                                            "${vehicle.vehicleType?.value ?? 'Unknown'} - ${vehicle.name ?? 'Vehicle'}",
-                                            style: AppFonts.regular14()
-                                                .copyWith(
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ),
-                                          ),
-                                          trailing:
-                                              vehicle.isVerified
-                                                  ? Icon(
-                                                    Icons.verified,
-                                                    color: AppColors.primary,
-                                                    size: 20,
-                                                  )
-                                                  : null,
-                                          onTap: () => onSelected(vehicle),
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-
-                                emptyDropDown: (controller, close) {
-                                  return Container(
-                                    padding: const EdgeInsets.all(16.0),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: AppColors.textSecondary
-                                            .withOpacity(0.3),
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        "No vehicles found",
-                                        style: AppFonts.regular14().copyWith(
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                          // Registration Number Field (Simple TextField)
+                          TextField(
+                            controller: regNumberController,
+                            style: TextStyle(
+                              fontSize:
+                                  screenWidth *
+                                  (isLargeScreen
+                                      ? 0.016
+                                      : isTablet
+                                      ? 0.025
+                                      : 0.04),
+                              color: AppColors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "KL00AA0000",
+                              hintStyle: TextStyle(
+                                fontSize:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.014
+                                        : isTablet
+                                        ? 0.022
+                                        : 0.035),
+                                color: AppColors.textSecondary
+                                    .withOpacity(0.6),
+                              ),
+                              labelText: "Registration Number",
+                              labelStyle: TextStyle(
+                                fontSize:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.014
+                                        : isTablet
+                                        ? 0.022
+                                        : 0.035),
+                                color: AppColors.textSecondary,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: AppColors.textSecondary
+                                      .withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: AppColors.textSecondary
+                                      .withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.04,
+                                vertical: screenHeight * 0.02,
+                              ),
+                            ),
                           ),
 
                           SizedBox(height: screenHeight * 0.025),

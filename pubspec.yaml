@@ -47,7 +47,6 @@ dependencies:
   connectivity_plus: ^6.1.4
   http: ^1.4.0
   flutter_launcher_icons: "^0.13.1"
-  search_autocomplete: ^1.0.2
 
 dev_dependencies:
   flutter_test:
