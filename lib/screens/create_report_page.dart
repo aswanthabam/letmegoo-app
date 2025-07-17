@@ -30,6 +30,7 @@ class VehicleSearchNotifier
   VehicleSearchNotifier() : super(const AsyncValue.data([]));
 
   void searchVehiclesDebounced(String query) {
+    print(query);
     if (query.isEmpty) {
       state = const AsyncValue.data([]);
       return;
@@ -70,6 +71,7 @@ class ReportStateNotifier
   Future<void> reportVehicle(ReportRequest request) async {
     state = const AsyncValue.loading();
     try {
+      print(request);
       final result = await AuthService.reportVehicle(request);
       print('Report submitted successfully: $result');
       if (mounted) {
@@ -116,6 +118,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   }
 
   void _onVehicleSearch(String query) {
+    print("obj");
     ref.read(vehicleSearchProvider.notifier).searchVehiclesDebounced(query);
   }
 
@@ -205,7 +208,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     final regNumber = regNumberController.text.trim();
     final message = messageController.text.trim();
 
-    if (regNumber.isEmpty || message.isEmpty) {
+    if (regNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Please fill all required fields"),
@@ -411,6 +414,11 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                                   return TextFormField(
                                     controller: regNumberController,
                                     onTap: onFieldTap,
+                                    onChanged: (value) {
+                                      // This is what's missing!
+                                      print(value);
+                                      _onVehicleSearch(value);
+                                    },
                                     style: TextStyle(
                                       fontSize:
                                           screenWidth *

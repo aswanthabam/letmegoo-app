@@ -252,11 +252,12 @@ class AuthService {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31C5F4)),
-          ),
-        ),
+        builder:
+            (context) => const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31C5F4)),
+              ),
+            ),
       );
 
       // Sign out from both Firebase and Google
@@ -274,7 +275,6 @@ class AuthService {
           (route) => false,
         );
       }
-
     } catch (e) {
       // Close loading dialog if still open
       if (context.mounted) {
@@ -285,16 +285,17 @@ class AuthService {
       if (context.mounted) {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Logout Error'),
-            content: Text('Failed to logout: $e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Logout Error'),
+                content: Text('Failed to logout: $e'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
       }
     }
@@ -721,7 +722,7 @@ class AuthService {
       }
 
       final headers = await _getAuthHeaders();
-      
+
       final uri = Uri.parse('$baseUrl/vehicle/search').replace(
         queryParameters: {
           'vehicle_number': query.trim(),
@@ -729,11 +730,11 @@ class AuthService {
           'offset': '0',
         },
       );
-
+      print(uri);
       final response = await _httpClient
           .get(uri, headers: headers)
           .timeout(timeoutDuration);
-
+      print(response);
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = json.decode(response.body);
         return jsonList
@@ -756,23 +757,31 @@ class AuthService {
   }
 
   /// Report a vehicle for blocking
-  static Future<Map<String, dynamic>> reportVehicle(ReportRequest request) async {
+  static Future<Map<String, dynamic>> reportVehicle(
+    ReportRequest request,
+  ) async {
+    print("insid");
     try {
       if (!await _hasInternetConnection()) {
         throw ConnectivityException('No internet connection');
+      } // Get current Firebase user
+      final User? firebaseUser = FirebaseAuth.instance.currentUser;
+
+      if (firebaseUser == null) {
+        throw Exception('No Firebase user found');
       }
 
-      final headers = await _getAuthHeaders();
+      final String? idToken = await firebaseUser.getIdToken(true);
 
       var multipartRequest = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/vehicle/report'),
       );
-
+      print(multipartRequest);
       // Add headers (remove Content-Type as it's set automatically for multipart)
       multipartRequest.headers.addAll({
         'Accept': 'application/json',
-        'Authorization': headers['Authorization']!,
+        'Authorization': 'Bearer $idToken',
       });
 
       // Add form fields
@@ -790,8 +799,12 @@ class AuthService {
         }
       }
 
-      final streamedResponse = await multipartRequest.send().timeout(timeoutDuration);
+      final streamedResponse = await multipartRequest.send().timeout(
+        timeoutDuration,
+      );
       final response = await http.Response.fromStream(streamedResponse);
+      print(response.statusCode);
+      print(response);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body) as Map<String, dynamic>;
