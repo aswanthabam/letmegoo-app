@@ -34,7 +34,7 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
       case 'public':
         return 'all';
       case 'private':
-        return 'name';
+        return 'private';
       case 'anonymous':
         return 'anonymous';
       default:
@@ -47,7 +47,7 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
     switch (uiValue) {
       case 'all':
         return 'public';
-      case 'name':
+      case 'private':
         return 'private';
       case 'anonymous':
         return 'anonymous';
@@ -57,6 +57,7 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
   }
 
   Future<void> _updatePrivacyPreference() async {
+    print("name $_selectedOption");
     if (_selectedOption == null) return;
 
     setState(() {
@@ -216,7 +217,7 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         child: RadioListTile<String>(
-                          value: 'name',
+                          value: 'private',
                           groupValue: _selectedOption,
                           onChanged:
                               _isLoading

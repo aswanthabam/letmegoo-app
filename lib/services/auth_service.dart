@@ -205,7 +205,7 @@ class AuthService {
         case 'all':
           apiValue = 'public';
           break;
-        case 'name':
+        case 'private':
           apiValue = 'private';
           break;
         case 'anonymous':
@@ -774,7 +774,7 @@ class AuthService {
 
       var multipartRequest = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/vehicle/report'),
+        Uri.parse('$baseUrl/vehicle/report/'),
       );
       print(multipartRequest);
       // Add headers (remove Content-Type as it's set automatically for multipart)
