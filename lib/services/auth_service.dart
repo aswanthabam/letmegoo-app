@@ -1,4 +1,3 @@
-// lib/services/auth_service.dart (Optimized version)
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';

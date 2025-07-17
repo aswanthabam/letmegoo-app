@@ -1,6 +1,8 @@
+enum PrivacyPreference { public, private, anonymous }
+
 class VehicleOwner {
   final String id;
-  final String privacyPreference;
+  final PrivacyPreference privacyPreference;
   final String fullname;
   final String email;
   final String phoneNumber;
@@ -16,7 +18,10 @@ class VehicleOwner {
   factory VehicleOwner.fromJson(Map<String, dynamic> json) {
     return VehicleOwner(
       id: json['id']?.toString() ?? '',
-      privacyPreference: json['privacy_preference']?.toString() ?? '',
+      privacyPreference: PrivacyPreference.values.firstWhere(
+        (e) => e.toString().split('.').last == json['privacy_preference'],
+        orElse: () => PrivacyPreference.anonymous,
+      ),
       fullname: json['fullname']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phoneNumber: json['phone_number']?.toString() ?? '',
@@ -27,7 +32,7 @@ class VehicleOwner {
   factory VehicleOwner.empty() {
     return VehicleOwner(
       id: '',
-      privacyPreference: '',
+      privacyPreference: PrivacyPreference.anonymous,
       fullname: '',
       email: '',
       phoneNumber: '',

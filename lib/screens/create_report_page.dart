@@ -7,6 +7,8 @@ import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
 import 'package:letmegoo/models/report_request.dart';
+import 'package:letmegoo/models/vehicle.dart';
+import 'package:letmegoo/notify.dart';
 
 // State Management with Riverpod
 final reportStateProvider = StateNotifierProvider<
@@ -14,6 +16,13 @@ final reportStateProvider = StateNotifierProvider<
   AsyncValue<Map<String, dynamic>?>
 >((ref) {
   return ReportStateNotifier();
+});
+
+final vehicleSearchProvider = StateNotifierProvider<
+  VehicleSearchNotifier,
+  AsyncValue<Vehicle?>
+>((ref) {
+  return VehicleSearchNotifier();
 });
 
 class ReportStateNotifier
@@ -41,9 +50,36 @@ class ReportStateNotifier
   }
 }
 
+class VehicleSearchNotifier extends StateNotifier<AsyncValue<Vehicle?>> {
+  VehicleSearchNotifier() : super(const AsyncValue.data(null));
+
+  Future<void> searchVehicle(String registrationNumber) async {
+    state = const AsyncValue.loading();
+    try {
+      final vehicle = await AuthService.getVehicleByRegistrationNumber(registrationNumber);
+      if (mounted) {
+        state = AsyncValue.data(vehicle);
+      }
+    } catch (e) {
+      if (mounted) {
+        state = AsyncValue.error(e, StackTrace.current);
+      }
+    }
+  }
+
+  void resetState() {
+    state = const AsyncValue.data(null);
+  }
+}
+
 // UI Component
 class CreateReportPage extends ConsumerStatefulWidget {
-  const CreateReportPage({super.key});
+  final String? registrationNumber; // Add this parameter
+  
+  const CreateReportPage({
+    super.key,
+    this.registrationNumber,
+  });
 
   @override
   ConsumerState<CreateReportPage> createState() => _CreateReportPageState();
@@ -55,10 +91,15 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
   bool isAnonymous = true;
   List<File> _images = [];
+  bool get isReportMode => widget.registrationNumber != null;
 
   @override
   void initState() {
     super.initState();
+    // If registration number is passed, populate the field
+    if (widget.registrationNumber != null) {
+      regNumberController.text = widget.registrationNumber!;
+    }
   }
 
   @override
@@ -83,63 +124,75 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     String title,
     String content, {
     bool isError = false,
+    VoidCallback? onOkPressed,
   }) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => Dialog.fullscreen(
-            child: Container(
-              color: AppColors.background,
-              child: SafeArea(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isError
-                          ? Icons.error_outline
-                          : Icons.check_circle_outline,
-                      size: 80,
-                      color: isError ? AppColors.darkRed : AppColors.primary,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      title,
-                      style: AppFonts.semiBold24(),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
-                        content,
-                        style: AppFonts.regular16().copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: CommonButton(
-                        text: "OK",
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          if (!isError) {
-                            Navigator.of(
-                              context,
-                            ).pop(); // Go back to previous screen
-                          }
-                        },
-                      ),
-                    ),
-                  ],
+      builder: (context) => Dialog.fullscreen(
+        child: Container(
+          color: AppColors.background,
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isError ? Icons.error_outline : Icons.check_circle_outline,
+                  size: 80,
+                  color: isError ? AppColors.darkRed : AppColors.primary,
                 ),
-              ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: AppFonts.semiBold24(),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    content,
+                    style: AppFonts.regular16().copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: CommonButton(
+                    text: "OK",
+                    onTap: onOkPressed ?? () {
+                      Navigator.of(context).pop();
+                      if (!isError) {
+                        Navigator.of(context).pop(); // Go back to previous screen
+                      }
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+      ),
     );
+  }
+
+  void _handleSearchTap() {
+    final regNumber = regNumberController.text.trim();
+
+    if (regNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Please enter a registration number"),
+          backgroundColor: AppColors.darkRed,
+        ),
+      );
+      return;
+    }
+
+    ref.read(vehicleSearchProvider.notifier).searchVehicle(regNumber);
   }
 
   void _handleInformTap() {
@@ -173,11 +226,55 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     final isTablet = screenWidth > 600;
     final isLargeScreen = screenWidth > 900;
 
+    // Listen to vehicle search state changes
+    ref.listen<AsyncValue<Vehicle?>>(vehicleSearchProvider, (previous, next) {
+      next.when(
+        data: (vehicle) {
+          if (vehicle != null) {
+            // Navigate to notify page with vehicle data
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => Notify(vehicle: vehicle),
+              ),
+            );
+            ref.read(vehicleSearchProvider.notifier).resetState();
+          } else {
+            // Show vehicle not registered dialog
+            _showFullScreenDialog(
+              "Vehicle Not Found",
+              "This vehicle is not registered with us. You can still report this vehicle if it's causing an obstruction.",
+              isError: true,
+              onOkPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to report mode
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CreateReportPage(
+                      registrationNumber: regNumberController.text.trim(),
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+        },
+        error: (error, stackTrace) {
+          print("Error searching vehicle: $error");
+          _showFullScreenDialog(
+            "Error",
+            "Failed to search vehicle. Please try again.",
+            isError: true,
+          );
+          ref.read(vehicleSearchProvider.notifier).resetState();
+        },
+        loading: () {},
+      );
+    });
+
     // Listen to report state changes
-    ref.listen<AsyncValue<Map<String, dynamic>?>>(reportStateProvider, (
-      previous,
-      next,
-    ) {
+    ref.listen<AsyncValue<Map<String, dynamic>?>>(reportStateProvider, (previous, next) {
       next.when(
         data: (data) {
           if (data != null) {
@@ -202,6 +299,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     });
 
     final reportState = ref.watch(reportStateProvider);
+    final vehicleSearchState = ref.watch(vehicleSearchProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -222,13 +320,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                         icon: Icon(
                           Icons.arrow_back,
                           color: AppColors.textPrimary,
-                          size:
-                              screenWidth *
-                              (isLargeScreen
-                                  ? 0.025
-                                  : isTablet
-                                  ? 0.035
-                                  : 0.06),
+                          size: screenWidth * (isLargeScreen ? 0.025 : isTablet ? 0.035 : 0.06),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
@@ -241,9 +333,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                 // Scrollable Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.05,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
                     child: Container(
                       constraints: BoxConstraints(
                         maxWidth: isLargeScreen ? 600 : double.infinity,
@@ -255,20 +345,8 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                           // Angry Lock Image
                           Image.asset(
                             AppImages.angry_lock,
-                            height:
-                                screenWidth *
-                                (isLargeScreen
-                                    ? 0.2
-                                    : isTablet
-                                    ? 0.25
-                                    : 0.4),
-                            width:
-                                screenWidth *
-                                (isLargeScreen
-                                    ? 0.2
-                                    : isTablet
-                                    ? 0.25
-                                    : 0.4),
+                            height: screenWidth * (isLargeScreen ? 0.2 : isTablet ? 0.25 : 0.4),
+                            width: screenWidth * (isLargeScreen ? 0.2 : isTablet ? 0.25 : 0.4),
                             fit: BoxFit.contain,
                           ),
 
@@ -276,16 +354,10 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           // Title
                           Text(
-                            "Inform Owner",
+                            isReportMode ? "Inform Owner" : "Search Vehicle",
                             textAlign: TextAlign.center,
                             style: AppFonts.semiBold24().copyWith(
-                              fontSize:
-                                  screenWidth *
-                                  (isLargeScreen
-                                      ? 0.025
-                                      : isTablet
-                                      ? 0.035
-                                      : 0.055),
+                              fontSize: screenWidth * (isLargeScreen ? 0.025 : isTablet ? 0.035 : 0.055),
                             ),
                           ),
 
@@ -293,16 +365,12 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           // Description
                           Text(
-                            "Spotted a vehicle causing an obstruction?\nFill in the details below so we can alert the\nowner and get things moving quickly.",
+                            isReportMode 
+                              ? "Fill in the details below so we can alert the\nowner and get things moving quickly."
+                              : "Enter the vehicle registration number to\nsearch for the owner and report the vehicle.",
                             textAlign: TextAlign.center,
                             style: AppFonts.regular14().copyWith(
-                              fontSize:
-                                  screenWidth *
-                                  (isLargeScreen
-                                      ? 0.014
-                                      : isTablet
-                                      ? 0.025
-                                      : 0.035),
+                              fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.025 : 0.035),
                               color: AppColors.textSecondary,
                               height: 1.4,
                             ),
@@ -310,56 +378,38 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           SizedBox(height: screenHeight * 0.04),
 
-                          // Registration Number Field (Simple TextField)
+                          // Registration Number Field
                           TextField(
                             controller: regNumberController,
+                            readOnly: isReportMode, // Make readonly in report mode
                             style: TextStyle(
-                              fontSize:
-                                  screenWidth *
-                                  (isLargeScreen
-                                      ? 0.016
-                                      : isTablet
-                                      ? 0.025
-                                      : 0.04),
-                              color: AppColors.textPrimary,
+                              fontSize: screenWidth * (isLargeScreen ? 0.016 : isTablet ? 0.025 : 0.04),
+                              color: isReportMode ? AppColors.textSecondary : AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: "KL00AA0000",
                               hintStyle: TextStyle(
-                                fontSize:
-                                    screenWidth *
-                                    (isLargeScreen
-                                        ? 0.014
-                                        : isTablet
-                                        ? 0.022
-                                        : 0.035),
-                                color: AppColors.textSecondary
-                                    .withOpacity(0.6),
+                                fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
+                                color: AppColors.textSecondary.withOpacity(0.6),
                               ),
                               labelText: "Registration Number",
                               labelStyle: TextStyle(
-                                fontSize:
-                                    screenWidth *
-                                    (isLargeScreen
-                                        ? 0.014
-                                        : isTablet
-                                        ? 0.022
-                                        : 0.035),
+                                fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
                                 color: AppColors.textSecondary,
                               ),
+                              filled: isReportMode,
+                              fillColor: isReportMode ? AppColors.textSecondary.withOpacity(0.1) : null,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: AppColors.textSecondary
-                                      .withOpacity(0.3),
+                                  color: AppColors.textSecondary.withOpacity(0.3),
                                   width: 1,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: AppColors.textSecondary
-                                      .withOpacity(0.3),
+                                  color: AppColors.textSecondary.withOpacity(0.3),
                                   width: 1,
                                 ),
                               ),
@@ -377,245 +427,190 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                             ),
                           ),
 
-                          SizedBox(height: screenHeight * 0.025),
+                          // Show additional fields only in report mode
+                          if (isReportMode) ...[
+                            SizedBox(height: screenHeight * 0.025),
 
-                          // Message Field
-                          TextField(
-                            controller: messageController,
-                            maxLines: 3,
-                            style: TextStyle(
-                              fontSize:
-                                  screenWidth *
-                                  (isLargeScreen
-                                      ? 0.016
-                                      : isTablet
-                                      ? 0.025
-                                      : 0.04),
-                              color: AppColors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText:
-                                  "Enter the message to the owner of this vehicle",
-                              hintStyle: TextStyle(
-                                fontSize:
-                                    screenWidth *
-                                    (isLargeScreen
-                                        ? 0.014
-                                        : isTablet
-                                        ? 0.022
-                                        : 0.035),
-                                color: AppColors.textSecondary.withOpacity(0.6),
+                            // Message Field
+                            TextField(
+                              controller: messageController,
+                              maxLines: 3,
+                              style: TextStyle(
+                                fontSize: screenWidth * (isLargeScreen ? 0.016 : isTablet ? 0.025 : 0.04),
+                                color: AppColors.textPrimary,
                               ),
-                              labelText: "Message",
-                              labelStyle: TextStyle(
-                                fontSize:
-                                    screenWidth *
-                                    (isLargeScreen
-                                        ? 0.014
-                                        : isTablet
-                                        ? 0.022
-                                        : 0.035),
-                                color: AppColors.textSecondary,
-                              ),
-                              alignLabelWithHint: true,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: AppColors.textSecondary.withOpacity(
-                                    0.3,
+                              decoration: InputDecoration(
+                                hintText: "Enter the message to the owner of this vehicle",
+                                hintStyle: TextStyle(
+                                  fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
+                                  color: AppColors.textSecondary.withOpacity(0.6),
+                                ),
+                                labelText: "Message",
+                                labelStyle: TextStyle(
+                                  fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
+                                  color: AppColors.textSecondary,
+                                ),
+                                alignLabelWithHint: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: AppColors.textSecondary.withOpacity(0.3),
+                                    width: 1,
                                   ),
-                                  width: 1,
                                 ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: AppColors.textSecondary.withOpacity(
-                                    0.3,
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: AppColors.textSecondary.withOpacity(0.3),
+                                    width: 1,
                                   ),
-                                  width: 1,
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: AppColors.primary,
-                                  width: 2,
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
                                 ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
-                                vertical: screenHeight * 0.02,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                  vertical: screenHeight * 0.02,
+                                ),
                               ),
                             ),
-                          ),
 
-                          SizedBox(height: screenHeight * 0.025),
+                            SizedBox(height: screenHeight * 0.025),
 
-                          // Add Images Button
-                          GestureDetector(
-                            onTap: _pickImages,
-                            child: Container(
-                              width:
-                                  screenWidth *
-                                  (isLargeScreen
-                                      ? 0.4
-                                      : isTablet
-                                      ? 0.6
-                                      : 0.75),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.04,
-                                vertical: screenHeight * 0.018,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: AppColors.textSecondary.withOpacity(
-                                    0.3,
-                                  ),
-                                  width: 1,
+                            // Add Images Button
+                            GestureDetector(
+                              onTap: _pickImages,
+                              child: Container(
+                                width: screenWidth * (isLargeScreen ? 0.4 : isTablet ? 0.6 : 0.75),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.04,
+                                  vertical: screenHeight * 0.018,
                                 ),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.camera_alt_outlined,
-                                    color: AppColors.textSecondary,
-                                    size:
-                                        screenWidth *
-                                        (isLargeScreen
-                                            ? 0.025
-                                            : isTablet
-                                            ? 0.035
-                                            : 0.055),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: AppColors.textSecondary.withOpacity(0.3),
+                                    width: 1,
                                   ),
-                                  SizedBox(width: screenWidth * 0.025),
-                                  Text(
-                                    "Add images of vehicle",
-                                    style: AppFonts.regular16().copyWith(
-                                      fontSize:
-                                          screenWidth *
-                                          (isLargeScreen
-                                              ? 0.016
-                                              : isTablet
-                                              ? 0.025
-                                              : 0.04),
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.camera_alt_outlined,
                                       color: AppColors.textSecondary,
+                                      size: screenWidth * (isLargeScreen ? 0.025 : isTablet ? 0.035 : 0.055),
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: screenWidth * 0.025),
+                                    Text(
+                                      "Add images of vehicle",
+                                      style: AppFonts.regular16().copyWith(
+                                        fontSize: screenWidth * (isLargeScreen ? 0.016 : isTablet ? 0.025 : 0.04),
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
 
-                          // Show selected images
-                          if (_images.isNotEmpty) ...[
-                            SizedBox(height: screenHeight * 0.02),
-                            SizedBox(
-                              height: screenHeight * 0.15,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _images.length,
-                                itemBuilder: (context, index) {
-                                  return Container(
-                                    margin: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
+                            // Show selected images
+                            if (_images.isNotEmpty) ...[
+                              SizedBox(height: screenHeight * 0.02),
+                              SizedBox(
+                                height: screenHeight * 0.15,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: _images.length,
+                                  itemBuilder: (context, index) {
+                                    return Container(
+                                      margin: const EdgeInsets.only(right: 10),
+                                      child: Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: Image.file(
+                                              _images[index],
+                                              height: screenHeight * 0.15,
+                                              width: screenHeight * 0.15,
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
-                                          child: Image.file(
-                                            _images[index],
-                                            height: screenHeight * 0.15,
-                                            width: screenHeight * 0.15,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                        Positioned(
-                                          top: 5,
-                                          right: 5,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                _images.removeAt(index);
-                                              });
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.all(2),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.darkRed,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Icon(
-                                                Icons.close,
-                                                color: AppColors.white,
-                                                size: 16,
+                                          Positioned(
+                                            top: 5,
+                                            right: 5,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _images.removeAt(index);
+                                                });
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.all(2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.darkRed,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.close,
+                                                  color: AppColors.white,
+                                                  size: 16,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-
-                          SizedBox(height: screenHeight * 0.03),
-
-                          // Anonymous Checkbox
-                          Row(
-                            children: [
-                              Transform.scale(
-                                scale:
-                                    isLargeScreen
-                                        ? 1.2
-                                        : isTablet
-                                        ? 1.1
-                                        : 1.0,
-                                child: Checkbox(
-                                  value: isAnonymous,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      isAnonymous = val ?? false;
-                                    });
+                                        ],
+                                      ),
+                                    );
                                   },
-                                  activeColor: AppColors.primary,
-                                  checkColor: AppColors.white,
-                                  side: BorderSide(
-                                    color:
-                                        isAnonymous
-                                            ? AppColors.primary
-                                            : AppColors.textSecondary
-                                                .withOpacity(0.5),
-                                    width: 2,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: screenWidth * 0.02),
-                              Expanded(
-                                child: Text(
-                                  "Do you want to keep your identity anonymous",
-                                  style: AppFonts.regular16().copyWith(
-                                    fontSize:
-                                        screenWidth *
-                                        (isLargeScreen
-                                            ? 0.014
-                                            : isTablet
-                                            ? 0.025
-                                            : 0.038),
-                                    color: AppColors.textSecondary,
-                                  ),
                                 ),
                               ),
                             ],
-                          ),
+
+                            SizedBox(height: screenHeight * 0.03),
+
+                            // Anonymous Checkbox
+                            Row(
+                              children: [
+                                Transform.scale(
+                                  scale: isLargeScreen ? 1.2 : isTablet ? 1.1 : 1.0,
+                                  child: Checkbox(
+                                    value: isAnonymous,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        isAnonymous = val ?? false;
+                                      });
+                                    },
+                                    activeColor: AppColors.primary,
+                                    checkColor: AppColors.white,
+                                    side: BorderSide(
+                                      color: isAnonymous 
+                                        ? AppColors.primary 
+                                        : AppColors.textSecondary.withOpacity(0.5),
+                                      width: 2,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth * 0.02),
+                                Expanded(
+                                  child: Text(
+                                    "Do you want to keep your identity anonymous",
+                                    style: AppFonts.regular16().copyWith(
+                                      fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.025 : 0.038),
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
 
                           SizedBox(height: screenHeight * 0.04),
                         ],
@@ -631,15 +626,15 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                     vertical: screenHeight * 0.02,
                   ),
                   child: CommonButton(
-                    text: reportState.isLoading ? "Submitting..." : "Inform",
-                    onTap: reportState.isLoading ? () {} : _handleInformTap,
+                    text: _getButtonText(),
+                    onTap: _getButtonAction(),
                   ),
                 ),
               ],
             ),
 
             // Loading overlay
-            if (reportState.isLoading)
+            if (reportState.isLoading || vehicleSearchState.isLoading)
               Container(
                 color: Colors.black.withOpacity(0.3),
                 child: const Center(child: CircularProgressIndicator()),
@@ -648,5 +643,26 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
         ),
       ),
     );
+  }
+
+  String _getButtonText() {
+    final reportState = ref.watch(reportStateProvider);
+    final vehicleSearchState = ref.watch(vehicleSearchProvider);
+
+    if (reportState.isLoading) return "Submitting...";
+    if (vehicleSearchState.isLoading) return "Searching...";
+    
+    return isReportMode ? "Inform" : "Search";
+  }
+
+  VoidCallback _getButtonAction() {
+    final reportState = ref.watch(reportStateProvider);
+    final vehicleSearchState = ref.watch(vehicleSearchProvider);
+
+    if (reportState.isLoading || vehicleSearchState.isLoading) {
+      return () {};
+    }
+    
+    return isReportMode ? _handleInformTap : _handleSearchTap;
   }
 }
