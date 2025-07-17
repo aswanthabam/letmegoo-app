@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/models/vehicle.dart';
 import 'package:letmegoo/screens/create_report_page.dart';
@@ -23,10 +24,12 @@ class _NotifyState extends State<Notify> {
     final formattedDate = DateFormat('HH:mm | dd MMMM yyyy').format(now);
 
     // Determine if owner details should be visible based on privacy
-    final bool isPublic = widget.vehicle.owner.privacyPreference == 'public';
-    final bool isPrivate = widget.vehicle.owner.privacyPreference == 'private';
+    final bool isPublic =
+        widget.vehicle.owner.privacyPreference == PrivacyPreference.public;
+    final bool isPrivate =
+        widget.vehicle.owner.privacyPreference == PrivacyPreference.private;
     final bool isAnonymous =
-        widget.vehicle.owner.privacyPreference == 'anonymous';
+        widget.vehicle.owner.privacyPreference == PrivacyPreference.anonymous;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -47,7 +50,7 @@ class _NotifyState extends State<Notify> {
             children: [
               const SizedBox(height: 20),
               Image.asset(
-                'assets/notify.png', // Replace with your asset path
+                AppImages.lock_message, // Replace with your asset path
                 height: 185,
                 width: 185,
               ),

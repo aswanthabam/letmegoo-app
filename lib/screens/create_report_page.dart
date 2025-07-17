@@ -18,12 +18,10 @@ final reportStateProvider = StateNotifierProvider<
   return ReportStateNotifier();
 });
 
-final vehicleSearchProvider = StateNotifierProvider<
-  VehicleSearchNotifier,
-  AsyncValue<Vehicle?>
->((ref) {
-  return VehicleSearchNotifier();
-});
+final vehicleSearchProvider =
+    StateNotifierProvider<VehicleSearchNotifier, AsyncValue<Vehicle?>>((ref) {
+      return VehicleSearchNotifier();
+    });
 
 class ReportStateNotifier
     extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
@@ -54,13 +52,21 @@ class VehicleSearchNotifier extends StateNotifier<AsyncValue<Vehicle?>> {
   VehicleSearchNotifier() : super(const AsyncValue.data(null));
 
   Future<void> searchVehicle(String registrationNumber) async {
+    print("error--");
+
     state = const AsyncValue.loading();
     try {
-      final vehicle = await AuthService.getVehicleByRegistrationNumber(registrationNumber);
+      final vehicle = await AuthService.getVehicleByRegistrationNumber(
+        registrationNumber,
+      );
+      print(vehicle);
+      print(mounted);
       if (mounted) {
         state = AsyncValue.data(vehicle);
       }
     } catch (e) {
+      print("error--");
+      print(e);
       if (mounted) {
         state = AsyncValue.error(e, StackTrace.current);
       }
@@ -75,11 +81,8 @@ class VehicleSearchNotifier extends StateNotifier<AsyncValue<Vehicle?>> {
 // UI Component
 class CreateReportPage extends ConsumerStatefulWidget {
   final String? registrationNumber; // Add this parameter
-  
-  const CreateReportPage({
-    super.key,
-    this.registrationNumber,
-  });
+
+  const CreateReportPage({super.key, this.registrationNumber});
 
   @override
   ConsumerState<CreateReportPage> createState() => _CreateReportPageState();
@@ -129,53 +132,60 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog.fullscreen(
-        child: Container(
-          color: AppColors.background,
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isError ? Icons.error_outline : Icons.check_circle_outline,
-                  size: 80,
-                  color: isError ? AppColors.darkRed : AppColors.primary,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  title,
-                  style: AppFonts.semiBold24(),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    content,
-                    style: AppFonts.regular16().copyWith(
-                      color: AppColors.textSecondary,
+      builder:
+          (context) => Dialog.fullscreen(
+            child: Container(
+              color: AppColors.background,
+              child: SafeArea(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isError
+                          ? Icons.error_outline
+                          : Icons.check_circle_outline,
+                      size: 80,
+                      color: isError ? AppColors.darkRed : AppColors.primary,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                    const SizedBox(height: 20),
+                    Text(
+                      title,
+                      style: AppFonts.semiBold24(),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        content,
+                        style: AppFonts.regular16().copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: CommonButton(
+                        text: "OK",
+                        onTap:
+                            onOkPressed ??
+                            () {
+                              Navigator.of(context).pop();
+                              if (!isError) {
+                                Navigator.of(
+                                  context,
+                                ).pop(); // Go back to previous screen
+                              }
+                            },
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 40),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: CommonButton(
-                    text: "OK",
-                    onTap: onOkPressed ?? () {
-                      Navigator.of(context).pop();
-                      if (!isError) {
-                        Navigator.of(context).pop(); // Go back to previous screen
-                      }
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -230,15 +240,14 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     ref.listen<AsyncValue<Vehicle?>>(vehicleSearchProvider, (previous, next) {
       next.when(
         data: (vehicle) {
+          print("ui data $vehicle");
           if (vehicle != null) {
             // Navigate to notify page with vehicle data
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => Notify(vehicle: vehicle),
-              ),
+              MaterialPageRoute(builder: (context) => Notify(vehicle: vehicle)),
             );
-            ref.read(vehicleSearchProvider.notifier).resetState();
+            // ref.read(vehicleSearchProvider.notifier).resetState();
           } else {
             // Show vehicle not registered dialog
             _showFullScreenDialog(
@@ -251,9 +260,10 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => CreateReportPage(
-                      registrationNumber: regNumberController.text.trim(),
-                    ),
+                    builder:
+                        (context) => CreateReportPage(
+                          registrationNumber: regNumberController.text.trim(),
+                        ),
                   ),
                 );
               },
@@ -274,7 +284,10 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     });
 
     // Listen to report state changes
-    ref.listen<AsyncValue<Map<String, dynamic>?>>(reportStateProvider, (previous, next) {
+    ref.listen<AsyncValue<Map<String, dynamic>?>>(reportStateProvider, (
+      previous,
+      next,
+    ) {
       next.when(
         data: (data) {
           if (data != null) {
@@ -320,7 +333,13 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                         icon: Icon(
                           Icons.arrow_back,
                           color: AppColors.textPrimary,
-                          size: screenWidth * (isLargeScreen ? 0.025 : isTablet ? 0.035 : 0.06),
+                          size:
+                              screenWidth *
+                              (isLargeScreen
+                                  ? 0.025
+                                  : isTablet
+                                  ? 0.035
+                                  : 0.06),
                         ),
                         onPressed: () {
                           Navigator.pop(context);
@@ -333,7 +352,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                 // Scrollable Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                    ),
                     child: Container(
                       constraints: BoxConstraints(
                         maxWidth: isLargeScreen ? 600 : double.infinity,
@@ -345,8 +366,20 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                           // Angry Lock Image
                           Image.asset(
                             AppImages.angry_lock,
-                            height: screenWidth * (isLargeScreen ? 0.2 : isTablet ? 0.25 : 0.4),
-                            width: screenWidth * (isLargeScreen ? 0.2 : isTablet ? 0.25 : 0.4),
+                            height:
+                                screenWidth *
+                                (isLargeScreen
+                                    ? 0.2
+                                    : isTablet
+                                    ? 0.25
+                                    : 0.4),
+                            width:
+                                screenWidth *
+                                (isLargeScreen
+                                    ? 0.2
+                                    : isTablet
+                                    ? 0.25
+                                    : 0.4),
                             fit: BoxFit.contain,
                           ),
 
@@ -357,7 +390,13 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                             isReportMode ? "Inform Owner" : "Search Vehicle",
                             textAlign: TextAlign.center,
                             style: AppFonts.semiBold24().copyWith(
-                              fontSize: screenWidth * (isLargeScreen ? 0.025 : isTablet ? 0.035 : 0.055),
+                              fontSize:
+                                  screenWidth *
+                                  (isLargeScreen
+                                      ? 0.025
+                                      : isTablet
+                                      ? 0.035
+                                      : 0.055),
                             ),
                           ),
 
@@ -365,12 +404,18 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           // Description
                           Text(
-                            isReportMode 
-                              ? "Fill in the details below so we can alert the\nowner and get things moving quickly."
-                              : "Enter the vehicle registration number to\nsearch for the owner and report the vehicle.",
+                            isReportMode
+                                ? "Fill in the details below so we can alert the\nowner and get things moving quickly."
+                                : "Enter the vehicle registration number to\nsearch for the owner and report the vehicle.",
                             textAlign: TextAlign.center,
                             style: AppFonts.regular14().copyWith(
-                              fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.025 : 0.035),
+                              fontSize:
+                                  screenWidth *
+                                  (isLargeScreen
+                                      ? 0.014
+                                      : isTablet
+                                      ? 0.025
+                                      : 0.035),
                               color: AppColors.textSecondary,
                               height: 1.4,
                             ),
@@ -381,35 +426,64 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                           // Registration Number Field
                           TextField(
                             controller: regNumberController,
-                            readOnly: isReportMode, // Make readonly in report mode
+                            readOnly:
+                                isReportMode, // Make readonly in report mode
                             style: TextStyle(
-                              fontSize: screenWidth * (isLargeScreen ? 0.016 : isTablet ? 0.025 : 0.04),
-                              color: isReportMode ? AppColors.textSecondary : AppColors.textPrimary,
+                              fontSize:
+                                  screenWidth *
+                                  (isLargeScreen
+                                      ? 0.016
+                                      : isTablet
+                                      ? 0.025
+                                      : 0.04),
+                              color:
+                                  isReportMode
+                                      ? AppColors.textSecondary
+                                      : AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: "KL00AA0000",
                               hintStyle: TextStyle(
-                                fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
+                                fontSize:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.014
+                                        : isTablet
+                                        ? 0.022
+                                        : 0.035),
                                 color: AppColors.textSecondary.withOpacity(0.6),
                               ),
                               labelText: "Registration Number",
                               labelStyle: TextStyle(
-                                fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
+                                fontSize:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.014
+                                        : isTablet
+                                        ? 0.022
+                                        : 0.035),
                                 color: AppColors.textSecondary,
                               ),
                               filled: isReportMode,
-                              fillColor: isReportMode ? AppColors.textSecondary.withOpacity(0.1) : null,
+                              fillColor:
+                                  isReportMode
+                                      ? AppColors.textSecondary.withOpacity(0.1)
+                                      : null,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: AppColors.textSecondary.withOpacity(0.3),
+                                  color: AppColors.textSecondary.withOpacity(
+                                    0.3,
+                                  ),
                                   width: 1,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide(
-                                  color: AppColors.textSecondary.withOpacity(0.3),
+                                  color: AppColors.textSecondary.withOpacity(
+                                    0.3,
+                                  ),
                                   width: 1,
                                 ),
                               ),
@@ -436,32 +510,57 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                               controller: messageController,
                               maxLines: 3,
                               style: TextStyle(
-                                fontSize: screenWidth * (isLargeScreen ? 0.016 : isTablet ? 0.025 : 0.04),
+                                fontSize:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.016
+                                        : isTablet
+                                        ? 0.025
+                                        : 0.04),
                                 color: AppColors.textPrimary,
                               ),
                               decoration: InputDecoration(
-                                hintText: "Enter the message to the owner of this vehicle",
+                                hintText:
+                                    "Enter the message to the owner of this vehicle",
                                 hintStyle: TextStyle(
-                                  fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
-                                  color: AppColors.textSecondary.withOpacity(0.6),
+                                  fontSize:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.014
+                                          : isTablet
+                                          ? 0.022
+                                          : 0.035),
+                                  color: AppColors.textSecondary.withOpacity(
+                                    0.6,
+                                  ),
                                 ),
                                 labelText: "Message",
                                 labelStyle: TextStyle(
-                                  fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.022 : 0.035),
+                                  fontSize:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.014
+                                          : isTablet
+                                          ? 0.022
+                                          : 0.035),
                                   color: AppColors.textSecondary,
                                 ),
                                 alignLabelWithHint: true,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                   borderSide: BorderSide(
-                                    color: AppColors.textSecondary.withOpacity(0.3),
+                                    color: AppColors.textSecondary.withOpacity(
+                                      0.3,
+                                    ),
                                     width: 1,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                   borderSide: BorderSide(
-                                    color: AppColors.textSecondary.withOpacity(0.3),
+                                    color: AppColors.textSecondary.withOpacity(
+                                      0.3,
+                                    ),
                                     width: 1,
                                   ),
                                 ),
@@ -485,14 +584,22 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                             GestureDetector(
                               onTap: _pickImages,
                               child: Container(
-                                width: screenWidth * (isLargeScreen ? 0.4 : isTablet ? 0.6 : 0.75),
+                                width:
+                                    screenWidth *
+                                    (isLargeScreen
+                                        ? 0.4
+                                        : isTablet
+                                        ? 0.6
+                                        : 0.75),
                                 padding: EdgeInsets.symmetric(
                                   horizontal: screenWidth * 0.04,
                                   vertical: screenHeight * 0.018,
                                 ),
                                 decoration: BoxDecoration(
                                   border: Border.all(
-                                    color: AppColors.textSecondary.withOpacity(0.3),
+                                    color: AppColors.textSecondary.withOpacity(
+                                      0.3,
+                                    ),
                                     width: 1,
                                   ),
                                   borderRadius: BorderRadius.circular(25),
@@ -503,13 +610,25 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                                     Icon(
                                       Icons.camera_alt_outlined,
                                       color: AppColors.textSecondary,
-                                      size: screenWidth * (isLargeScreen ? 0.025 : isTablet ? 0.035 : 0.055),
+                                      size:
+                                          screenWidth *
+                                          (isLargeScreen
+                                              ? 0.025
+                                              : isTablet
+                                              ? 0.035
+                                              : 0.055),
                                     ),
                                     SizedBox(width: screenWidth * 0.025),
                                     Text(
                                       "Add images of vehicle",
                                       style: AppFonts.regular16().copyWith(
-                                        fontSize: screenWidth * (isLargeScreen ? 0.016 : isTablet ? 0.025 : 0.04),
+                                        fontSize:
+                                            screenWidth *
+                                            (isLargeScreen
+                                                ? 0.016
+                                                : isTablet
+                                                ? 0.025
+                                                : 0.04),
                                         color: AppColors.textSecondary,
                                       ),
                                     ),
@@ -532,7 +651,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                                       child: Stack(
                                         children: [
                                           ClipRRect(
-                                            borderRadius: BorderRadius.circular(10),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
                                             child: Image.file(
                                               _images[index],
                                               height: screenHeight * 0.15,
@@ -550,7 +671,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                                                 });
                                               },
                                               child: Container(
-                                                padding: const EdgeInsets.all(2),
+                                                padding: const EdgeInsets.all(
+                                                  2,
+                                                ),
                                                 decoration: BoxDecoration(
                                                   color: AppColors.darkRed,
                                                   shape: BoxShape.circle,
@@ -577,7 +700,12 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                             Row(
                               children: [
                                 Transform.scale(
-                                  scale: isLargeScreen ? 1.2 : isTablet ? 1.1 : 1.0,
+                                  scale:
+                                      isLargeScreen
+                                          ? 1.2
+                                          : isTablet
+                                          ? 1.1
+                                          : 1.0,
                                   child: Checkbox(
                                     value: isAnonymous,
                                     onChanged: (val) {
@@ -588,9 +716,11 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                                     activeColor: AppColors.primary,
                                     checkColor: AppColors.white,
                                     side: BorderSide(
-                                      color: isAnonymous 
-                                        ? AppColors.primary 
-                                        : AppColors.textSecondary.withOpacity(0.5),
+                                      color:
+                                          isAnonymous
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary
+                                                  .withOpacity(0.5),
                                       width: 2,
                                     ),
                                     shape: RoundedRectangleBorder(
@@ -603,7 +733,13 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                                   child: Text(
                                     "Do you want to keep your identity anonymous",
                                     style: AppFonts.regular16().copyWith(
-                                      fontSize: screenWidth * (isLargeScreen ? 0.014 : isTablet ? 0.025 : 0.038),
+                                      fontSize:
+                                          screenWidth *
+                                          (isLargeScreen
+                                              ? 0.014
+                                              : isTablet
+                                              ? 0.025
+                                              : 0.038),
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
@@ -651,7 +787,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
     if (reportState.isLoading) return "Submitting...";
     if (vehicleSearchState.isLoading) return "Searching...";
-    
+
     return isReportMode ? "Inform" : "Search";
   }
 
@@ -662,7 +798,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     if (reportState.isLoading || vehicleSearchState.isLoading) {
       return () {};
     }
-    
+
     return isReportMode ? _handleInformTap : _handleSearchTap;
   }
 }
