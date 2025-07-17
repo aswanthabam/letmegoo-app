@@ -827,6 +827,55 @@ class AuthService {
     }
   }
 
+  static Future<Vehicle?> getVehicleByRegistrationNumber(
+    String registrationNumber,
+  ) async {
+    // Input validation
+    if (registrationNumber.trim().isEmpty) {
+      throw ValidationException('Registration number cannot be empty');
+    }
+
+    try {
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders();
+
+      final response = await _httpClient
+          .get(
+            Uri.parse('$baseUrl/vehicle/get/${registrationNumber.trim()}'),
+            headers: headers,
+          )
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> vehicleData = json.decode(response.body);
+        return Vehicle.fromJson(vehicleData);
+      } else if (response.statusCode == 404) {
+        // Vehicle not found - return null instead of throwing error
+        return null;
+      } else {
+        _handleHttpError(response);
+        return null;
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } on FormatException {
+      throw ApiException('Invalid response format');
+    } catch (e) {
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException ||
+          e is ValidationException) {
+        rethrow;
+      }
+      throw ApiException('Failed to fetch vehicle: $e');
+    }
+  }
+
   /// Clears cache (useful for testing or manual refresh)
   static void clearCache() {
     _vehicleTypesCache = null;
