@@ -33,7 +33,10 @@ class Report {
       timeDate: _formatDateTime(json['created_at']),
       status: json['is_closed'] == true ? 'Solved' : 'Active',
       location: json['location'] ?? 'Unknown Location',
-      message: json['notes'] ?? json['description'] ?? '',
+      message:
+          json['notes'] == ""
+              ? 'Your vehicle has been reported.'
+              : json['notes'],
       reporter: _getReporterText(json['reporter']),
       profileImage: json['profile_image'] ?? json['reporter_profile_image'],
       isClosed: json['is_closed'] ?? false,

@@ -45,8 +45,8 @@ class CustomBottomNav extends StatelessWidget {
               minimumSize: const Size.fromHeight(50),
             ),
             child: Text(
-              'Inform Owner',
-              style: AppFonts.bold14(color: AppColors.white),
+              'Search Vehicle',
+              style: AppFonts.bold16(color: AppColors.white),
             ),
           ),
           const SizedBox(height: 20),
