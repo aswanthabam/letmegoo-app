@@ -936,6 +936,8 @@ class AuthService {
           // Direct list of reports
           for (var item in responseData) {
             if (item is Map<String, dynamic>) {
+              print("datasss");
+              print(item);
               try {
                 reports.add(Report.fromJson(item));
               } catch (e) {
@@ -951,6 +953,8 @@ class AuthService {
             if (responseData.containsKey(key) && responseData[key] is List) {
               final List<dynamic> reportsList = responseData[key];
               for (var item in reportsList) {
+                print("datasss testtt");
+                print(item);
                 if (item is Map<String, dynamic>) {
                   try {
                     reports.add(Report.fromJson(item));
@@ -992,7 +996,6 @@ class AuthService {
         getSolvedReportsByUser(),
         getSolvedReportsAgainstUser(),
       ]);
-
       return {
         'liveByUser': results[0],
         'liveAgainstUser': results[1],

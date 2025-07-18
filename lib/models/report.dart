@@ -33,8 +33,8 @@ class Report {
       timeDate: _formatDateTime(json['created_at']),
       status: json['is_closed'] == true ? 'Solved' : 'Active',
       location: json['location'] ?? 'Unknown Location',
-      message: json['message'] ?? json['description'] ?? '',
-      reporter: _getReporterText(json),
+      message: json['notes'] ?? json['description'] ?? '',
+      reporter: _getReporterText(json['reporter']),
       profileImage: json['profile_image'] ?? json['reporter_profile_image'],
       isClosed: json['is_closed'] ?? false,
       type: json['type'] ?? '',
@@ -67,7 +67,7 @@ class Report {
 
   static String _getReporterText(Map<String, dynamic> json) {
     final type = json['type'] ?? '';
-    final reporterName = json['reporter_name'] ?? json['reported_by']?['name'];
+    final reporterName = json['fullname'];
 
     if (type == 'reported_by_me') {
       return 'Reported By you';
@@ -79,7 +79,7 @@ class Report {
       }
     }
 
-    return 'Reported By unknown';
+    return reporterName;
   }
 
   static String _getMonthName(int month) {

@@ -191,7 +191,7 @@ class ReportCard extends StatelessWidget {
                 SizedBox(width: screenWidth * 0.025),
                 Flexible(
                   child: Text(
-                    reporter,
+                    "Reported by $reporter",
                     style: AppFonts.regular14().copyWith(
                       fontSize:
                           screenWidth *
