@@ -225,6 +225,8 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
       isAnonymous: isAnonymous,
       notes: message,
     );
+    print(request.vehicleId);
+    print(request.isAnonymous);
 
     ref.read(reportStateProvider.notifier).reportVehicle(request);
   }

@@ -9,6 +9,7 @@ import 'package:letmegoo/models/vehicle_type.dart';
 import 'package:letmegoo/models/vehicle_search_result.dart';
 import 'package:letmegoo/models/report_request.dart';
 import 'package:letmegoo/services/google_auth_service.dart';
+import 'package:http_parser/http_parser.dart';
 
 class AuthService {
   static const String baseUrl = 'https://dev-api.letmegoo.com/api';
@@ -756,14 +757,17 @@ class AuthService {
   }
 
   /// Report a vehicle for blocking
+  /// Report a vehicle for blocking
   static Future<Map<String, dynamic>> reportVehicle(
     ReportRequest request,
   ) async {
-    print("insid");
+    print("inside");
     try {
       if (!await _hasInternetConnection()) {
         throw ConnectivityException('No internet connection');
-      } // Get current Firebase user
+      }
+
+      // Get current Firebase user
       final User? firebaseUser = FirebaseAuth.instance.currentUser;
 
       if (firebaseUser == null) {
@@ -776,7 +780,7 @@ class AuthService {
         'POST',
         Uri.parse('$baseUrl/vehicle/report/'),
       );
-      print(multipartRequest);
+
       // Add headers (remove Content-Type as it's set automatically for multipart)
       multipartRequest.headers.addAll({
         'Accept': 'application/json',
@@ -786,28 +790,41 @@ class AuthService {
       // Add form fields
       multipartRequest.fields.addAll(request.toFormData());
 
-      // Add images if any
+      // Add images if any - Fix: Use proper field names for each image
       for (int i = 0; i < request.images.length; i++) {
         final file = request.images[i];
         if (await file.exists()) {
           final imageFile = await http.MultipartFile.fromPath(
-            'images', // Use 'images' as the field name for multiple images
+            'images', // Keep as 'images' for multiple files
             file.path,
+            // Add content type for better compatibility
+            contentType: MediaType(
+              'image',
+              'jpeg',
+            ), // Adjust based on your image type
           );
           multipartRequest.files.add(imageFile);
         }
       }
 
+      // Debug: Print request details
+      print('Request URL: ${multipartRequest.url}');
+      print('Request fields: ${multipartRequest.fields}');
+      print('Request files: ${multipartRequest.files.length}');
+
       final streamedResponse = await multipartRequest.send().timeout(
         timeoutDuration,
       );
       final response = await http.Response.fromStream(streamedResponse);
-      print(response.statusCode);
-      print(response);
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body) as Map<String, dynamic>;
       } else {
+        // Print error details for debugging
+        print('Error response: ${response.body}');
         _handleHttpError(response);
         throw ApiException('Report submission failed');
       }
