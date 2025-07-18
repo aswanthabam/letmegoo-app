@@ -97,8 +97,6 @@ class _SplashScreenState extends State<SplashScreen>
       // Firebase user exists, authenticate with API
       final Map<String, dynamic>? userData =
           await AuthService.authenticateUser();
-      print(userData);
-      print("hiii");
 
       if (userData == null) {
         // API authentication failed, navigate to login
@@ -111,7 +109,6 @@ class _SplashScreenState extends State<SplashScreen>
 
       // Check if user has valid username
       if (user.fullname != "Unknown User" && user.phoneNumber != null) {
-        print(user.fullname);
         // User has complete profile, navigate to home
         _navigateToHome();
       } else {

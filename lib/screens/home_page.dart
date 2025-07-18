@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/models/report.dart';
+import 'package:letmegoo/services/auth_service.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../widgets/buildreportsection.dart';
 import '../widgets/builddivider.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final Function(int) onNavigate;
   final VoidCallback onAddPressed;
 
@@ -15,110 +17,173 @@ class HomePage extends StatelessWidget {
   });
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  // Loading and error states
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  // Report data
+  List<Report> _liveReportingsByYou = [];
+  List<Report> _liveReportingsAgainstYou = [];
+  List<Report> _solvedReportingsByYou = [];
+  List<Report> _solvedReportingsAgainstYou = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReports();
+  }
+
+  /// Load all reports from API
+  Future<void> _loadReports() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // Fetch all reports concurrently for better performance
+      final results = await AuthService.getAllReports();
+
+      if (mounted) {
+        setState(() {
+          _liveReportingsByYou = results['liveByUser'] ?? [];
+          _liveReportingsAgainstYou = results['liveAgainstUser'] ?? [];
+          _solvedReportingsByYou = results['solvedByUser'] ?? [];
+          _solvedReportingsAgainstYou = results['solvedAgainstUser'] ?? [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _getErrorMessage(e);
+        });
+      }
+    }
+  }
+
+  /// Get user-friendly error message
+  String _getErrorMessage(dynamic error) {
+    if (error is ConnectivityException) {
+      return 'No internet connection. Please check your network.';
+    } else if (error is AuthException) {
+      return 'Authentication error. Please login again.';
+    } else if (error is ApiException) {
+      return 'Server error. Please try again later.';
+    } else {
+      return 'Something went wrong. Please try again.';
+    }
+  }
+
+  /// Refresh data
+  Future<void> _onRefresh() async {
+    await _loadReports();
+  }
+
+  /// Convert Report objects to widget format
+  List<Map<String, dynamic>> _convertReportsToWidgetFormat(
+    List<Report> reports,
+  ) {
+    return reports.map((report) => report.toWidgetFormat()).toList();
+  }
+
+  /// Build loading widget
+  Widget _buildLoadingWidget(double screenHeight) {
+    return SizedBox(
+      height: screenHeight * 0.88,
+      width: double.infinity,
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF31C5F4)),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Loading reports...',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build error widget
+  Widget _buildErrorWidget(double screenHeight) {
+    return SizedBox(
+      height: screenHeight * 0.88,
+      width: double.infinity,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'An error occurred',
+              style: const TextStyle(fontSize: 16, color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadReports,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF31C5F4),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build empty state widget
+  Widget _buildEmptyWidget(double screenHeight, double screenWidth) {
+    return SizedBox(
+      height: screenHeight * 0.88,
+      width: double.infinity,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/Empty.png',
+              width: screenWidth * 0.7,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No reportings made by you or against you',
+              style: AppFonts.bold16(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isTablet = screenWidth > 600;
     final isLargeScreen = screenWidth > 900;
 
-    // Dummy Data
-    final List<Map<String, dynamic>> liveReportingsByYou = [
-      // {
-      //   'timeDate': '16:30 | 23rd July 2025',
-      //   'status': 'Active',
-      //   'location': 'Parking Lot A, Technopark',
-      //   'message': 'Vehicle blocking emergency exit. Please move immediately.',
-      //   'reporter': 'Reported By you',
-      //   'profileImage': null,
-      // },
-      // {
-      //   'timeDate': '14:15 | 23rd July 2025',
-      //   'status': 'Active',
-      //   'location': 'Main Gate, Campus B',
-      //   'message': 'Unauthorized parking in handicap zone.',
-      //   'reporter': 'Reported By you',
-      //   'profileImage': null,
-      // },
-    ];
-
-    final List<Map<String, dynamic>> liveReportingsAgainstYou = [
-      // {
-      //   'timeDate': '15:47 | 23rd July 2025',
-      //   'status': 'Active',
-      //   'location': 'Thejaswini, Phase 1, Technopark',
-      //   'message': 'Car is blocking path. Take care of it. Its URGE...',
-      //   'reporter': 'Reported By someone anonymous',
-      //   'profileImage': null,
-      // },
-    ];
-
-    final List<Map<String, dynamic>> solvedReportingsByYou = [
-      // {
-      //   'timeDate': '12:20 | 22nd July 2025',
-      //   'status': 'Solved',
-      //   'location': 'Visitor Parking, Phase 2',
-      //   'message': 'Double parking issue resolved.',
-      //   'reporter': 'Reported By you',
-      //   'profileImage': null,
-      // },
-      // {
-      //   'timeDate': '09:45 | 21st July 2025',
-      //   'status': 'Solved',
-      //   'location': 'Food Court Area',
-      //   'message': 'Vehicle parked in no-parking zone.',
-      //   'reporter': 'Reported By you',
-      //   'profileImage': null,
-      // },
-      // {
-      //   'timeDate': '18:30 | 20th July 2025',
-      //   'status': 'Solved',
-      //   'location': 'Library Parking',
-      //   'message': 'Motorcycle blocking walkway.',
-      //   'reporter': 'Reported By you',
-      //   'profileImage': null,
-      // },
-    ];
-
-    final List<Map<String, dynamic>> solvedReportingsAgainstYou = [
-      // {
-      //   'timeDate': '18:20 | 22nd July 2025',
-      //   'status': 'Solved',
-      //   'location': 'In front of Park Centre',
-      //   'message': 'Scooter parked wrongly. Needs to be moved.',
-      //   'reporter': 'Reported By security staff',
-      //   'profileImage': null,
-      // },
-      // {
-      //   'timeDate': '17:05 | 21st July 2025',
-      //   'status': 'Solved',
-      //   'location': 'Main Gate, Campus B',
-      //   'message': 'Unauthorized parking under tree area.',
-      //   'reporter': 'Reported By facility team',
-      //   'profileImage': null,
-      // },
-      // {
-      //   'timeDate': '14:30 | 19th July 2025',
-      //   'status': 'Solved',
-      //   'location': 'Parking Lot 3',
-      //   'message': 'Vehicle parked across two slots.',
-      //   'reporter': 'Reported By anonymous',
-      //   'profileImage': null,
-      // },
-      // {
-      //   'timeDate': '11:15 | 18th July 2025',
-      //   'status': 'Solved',
-      //   'location': 'Reception Area',
-      //   'message': 'Car blocking entrance door.',
-      //   'reporter': 'Reported By reception staff',
-      //   'profileImage': null,
-      // },
-    ];
-
+    // Check if all reports are empty
     final allReportsEmpty =
-        liveReportingsByYou.isEmpty &&
-        liveReportingsAgainstYou.isEmpty &&
-        solvedReportingsByYou.isEmpty &&
-        solvedReportingsAgainstYou.isEmpty;
+        _liveReportingsByYou.isEmpty &&
+        _liveReportingsAgainstYou.isEmpty &&
+        _solvedReportingsByYou.isEmpty &&
+        _solvedReportingsAgainstYou.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -130,95 +195,94 @@ class HomePage extends StatelessWidget {
             children: [
               // Main Content
               Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxWidth: isLargeScreen ? 900 : double.infinity,
+                child: RefreshIndicator(
+                  onRefresh: _onRefresh,
+                  color: const Color(0xFF31C5F4),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.02,
                     ),
-                    child:
-                        allReportsEmpty
-                            ? SizedBox(
-                              height: screenHeight * 0.88,
-                              width: double.infinity,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/Empty.png',
-                                      width: screenWidth * 0.7,
-                                      fit: BoxFit.contain,
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: isLargeScreen ? 900 : double.infinity,
+                      ),
+                      child:
+                          _isLoading
+                              ? _buildLoadingWidget(screenHeight)
+                              : _errorMessage != null
+                              ? _buildErrorWidget(screenHeight)
+                              : allReportsEmpty
+                              ? _buildEmptyWidget(screenHeight, screenWidth)
+                              : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_liveReportingsByYou.isNotEmpty) ...[
+                                    buildReportSection(
+                                      context: context,
+                                      title:
+                                          "Live Reportings By You (${_liveReportingsByYou.length})",
+                                      reports: _convertReportsToWidgetFormat(
+                                        _liveReportingsByYou,
+                                      ),
+                                      screenWidth: screenWidth,
+                                      isTablet: isTablet,
+                                      isLargeScreen: isLargeScreen,
                                     ),
-
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'No reportings made by you or against you',
-                                      style: AppFonts.bold16(),
+                                    SizedBox(height: screenHeight * 0.02),
+                                    buildDivider(screenWidth),
+                                    SizedBox(height: screenHeight * 0.02),
+                                  ],
+                                  if (_liveReportingsAgainstYou.isNotEmpty) ...[
+                                    buildReportSection(
+                                      context: context,
+                                      title:
+                                          "Live Reportings Against You (${_liveReportingsAgainstYou.length})",
+                                      reports: _convertReportsToWidgetFormat(
+                                        _liveReportingsAgainstYou,
+                                      ),
+                                      screenWidth: screenWidth,
+                                      isTablet: isTablet,
+                                      isLargeScreen: isLargeScreen,
+                                    ),
+                                    SizedBox(height: screenHeight * 0.02),
+                                    buildDivider(screenWidth),
+                                    SizedBox(height: screenHeight * 0.02),
+                                  ],
+                                  if (_solvedReportingsByYou.isNotEmpty) ...[
+                                    buildReportSection(
+                                      context: context,
+                                      title:
+                                          "Solved Reportings By You (${_solvedReportingsByYou.length})",
+                                      reports: _convertReportsToWidgetFormat(
+                                        _solvedReportingsByYou,
+                                      ),
+                                      screenWidth: screenWidth,
+                                      isTablet: isTablet,
+                                      isLargeScreen: isLargeScreen,
+                                    ),
+                                    SizedBox(height: screenHeight * 0.02),
+                                    buildDivider(screenWidth),
+                                    SizedBox(height: screenHeight * 0.02),
+                                  ],
+                                  if (_solvedReportingsAgainstYou
+                                      .isNotEmpty) ...[
+                                    buildReportSection(
+                                      context: context,
+                                      title:
+                                          "Solved Reportings Against You (${_solvedReportingsAgainstYou.length})",
+                                      reports: _convertReportsToWidgetFormat(
+                                        _solvedReportingsAgainstYou,
+                                      ),
+                                      screenWidth: screenWidth,
+                                      isTablet: isTablet,
+                                      isLargeScreen: isLargeScreen,
                                     ),
                                   ],
-                                ),
+                                  SizedBox(height: screenHeight * 0.02),
+                                ],
                               ),
-                            )
-                            : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (liveReportingsByYou.isNotEmpty) ...[
-                                  buildReportSection(
-                                    context: context,
-                                    title:
-                                        "Live Reportings By You (${liveReportingsByYou.length})",
-                                    reports: liveReportingsByYou,
-                                    screenWidth: screenWidth,
-                                    isTablet: isTablet,
-                                    isLargeScreen: isLargeScreen,
-                                  ),
-                                  SizedBox(height: screenHeight * 0.02),
-                                  buildDivider(screenWidth),
-                                  SizedBox(height: screenHeight * 0.02),
-                                ],
-                                if (liveReportingsAgainstYou.isNotEmpty) ...[
-                                  buildReportSection(
-                                    context: context,
-                                    title:
-                                        "Live Reportings Against You (${liveReportingsAgainstYou.length})",
-                                    reports: liveReportingsAgainstYou,
-                                    screenWidth: screenWidth,
-                                    isTablet: isTablet,
-                                    isLargeScreen: isLargeScreen,
-                                  ),
-                                  SizedBox(height: screenHeight * 0.02),
-                                  buildDivider(screenWidth),
-                                  SizedBox(height: screenHeight * 0.02),
-                                ],
-                                if (solvedReportingsByYou.isNotEmpty) ...[
-                                  buildReportSection(
-                                    context: context,
-                                    title:
-                                        "Solved Reportings By You (${solvedReportingsByYou.length})",
-                                    reports: solvedReportingsByYou,
-                                    screenWidth: screenWidth,
-                                    isTablet: isTablet,
-                                    isLargeScreen: isLargeScreen,
-                                  ),
-                                  SizedBox(height: screenHeight * 0.02),
-                                  buildDivider(screenWidth),
-                                  SizedBox(height: screenHeight * 0.02),
-                                ],
-                                if (solvedReportingsAgainstYou.isNotEmpty) ...[
-                                  buildReportSection(
-                                    context: context,
-                                    title:
-                                        "Solved Reportings Against You (${solvedReportingsAgainstYou.length})",
-                                    reports: solvedReportingsAgainstYou,
-                                    screenWidth: screenWidth,
-                                    isTablet: isTablet,
-                                    isLargeScreen: isLargeScreen,
-                                  ),
-                                ],
-                                SizedBox(height: screenHeight * 0.02),
-                              ],
-                            ),
+                    ),
                   ),
                 ),
               ),
@@ -226,8 +290,8 @@ class HomePage extends StatelessWidget {
               // Bottom Navigation
               CustomBottomNav(
                 currentIndex: 0,
-                onTap: onNavigate,
-                onInformPressed: onAddPressed,
+                onTap: widget.onNavigate,
+                onInformPressed: widget.onAddPressed,
               ),
             ],
           ),

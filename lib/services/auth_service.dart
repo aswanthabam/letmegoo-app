@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:letmegoo/models/report.dart';
 import 'package:letmegoo/models/vehicle.dart';
 import 'package:letmegoo/models/vehicle_type.dart';
 import 'package:letmegoo/models/vehicle_search_result.dart';
@@ -307,7 +308,6 @@ class AuthService {
       await GoogleAuthService.signOut();
       return true;
     } catch (e) {
-      print('Logout error: $e');
       return false;
     }
   }
@@ -474,9 +474,6 @@ class AuthService {
           )
           .timeout(timeoutDuration);
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         try {
           final dynamic responseData = json.decode(response.body);
@@ -491,7 +488,6 @@ class AuthService {
                   vehicles.add(Vehicle.fromJson(item));
                 } catch (e) {
                   print('Error parsing vehicle: $e');
-                  print('Vehicle data: $item');
                 }
               }
             }
@@ -508,7 +504,6 @@ class AuthService {
                       vehicles.add(Vehicle.fromJson(item));
                     } catch (e) {
                       print('Error parsing vehicle: $e');
-                      print('Vehicle data: $item');
                     }
                   }
                 }
@@ -526,7 +521,6 @@ class AuthService {
             }
           }
 
-          print('Successfully parsed ${vehicles.length} vehicles');
           return vehicles;
         } catch (e) {
           print('JSON parsing error: $e');
@@ -889,6 +883,124 @@ class AuthService {
         rethrow;
       }
       throw ApiException('Failed to fetch vehicle: $e');
+    }
+  }
+  // Add these methods to your AuthService class
+
+  /// Get live reports by user
+  static Future<List<Report>> getLiveReportsByUser() async {
+    return _getReports(isClosed: false, type: 'reported_by_me');
+  }
+
+  /// Get live reports against user
+  static Future<List<Report>> getLiveReportsAgainstUser() async {
+    return _getReports(isClosed: false, type: 'reported_to_me');
+  }
+
+  /// Get solved reports by user
+  static Future<List<Report>> getSolvedReportsByUser() async {
+    return _getReports(isClosed: true, type: 'reported_by_me');
+  }
+
+  /// Get solved reports against user
+  static Future<List<Report>> getSolvedReportsAgainstUser() async {
+    return _getReports(isClosed: true, type: 'reported_to_me');
+  }
+
+  /// Generic method to fetch reports
+  static Future<List<Report>> _getReports({
+    required bool isClosed,
+    required String type,
+  }) async {
+    try {
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders();
+
+      final uri = Uri.parse('$baseUrl/vehicle/report/list').replace(
+        queryParameters: {'is_closed': isClosed.toString(), 'type': type},
+      );
+
+      final response = await _httpClient
+          .get(uri, headers: headers)
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+
+        List<Report> reports = [];
+
+        if (responseData is List) {
+          // Direct list of reports
+          for (var item in responseData) {
+            if (item is Map<String, dynamic>) {
+              try {
+                reports.add(Report.fromJson(item));
+              } catch (e) {
+                print('Error parsing report: $e');
+              }
+            }
+          }
+        } else if (responseData is Map<String, dynamic>) {
+          // Object containing reports array
+          final possibleKeys = ['reports', 'data', 'results', 'items'];
+
+          for (String key in possibleKeys) {
+            if (responseData.containsKey(key) && responseData[key] is List) {
+              final List<dynamic> reportsList = responseData[key];
+              for (var item in reportsList) {
+                if (item is Map<String, dynamic>) {
+                  try {
+                    reports.add(Report.fromJson(item));
+                  } catch (e) {
+                    print('Error parsing report: $e');
+                  }
+                }
+              }
+              break;
+            }
+          }
+        }
+
+        return reports;
+      } else {
+        _handleHttpError(response);
+        return [];
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } catch (e) {
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException) {
+        rethrow;
+      }
+      throw ApiException('Failed to fetch reports: $e');
+    }
+  }
+
+  /// Get all reports for dashboard (optional - for efficiency)
+  static Future<Map<String, List<Report>>> getAllReports() async {
+    try {
+      final results = await Future.wait([
+        getLiveReportsByUser(),
+        getLiveReportsAgainstUser(),
+        getSolvedReportsByUser(),
+        getSolvedReportsAgainstUser(),
+      ]);
+
+      return {
+        'liveByUser': results[0],
+        'liveAgainstUser': results[1],
+        'solvedByUser': results[2],
+        'solvedAgainstUser': results[3],
+      };
+    } catch (e) {
+      throw ApiException('Failed to fetch all reports: $e');
     }
   }
 

@@ -10,6 +10,7 @@ Widget buildReportSection({
   required bool isTablet,
   required bool isLargeScreen,
 }) {
+  print(reports);
   return Container(
     width: double.infinity,
     padding: EdgeInsets.symmetric(

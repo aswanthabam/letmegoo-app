@@ -57,7 +57,6 @@ class _PrivacyPreferencesPageState extends State<PrivacyPreferencesPage> {
   }
 
   Future<void> _updatePrivacyPreference() async {
-    print("name $_selectedOption");
     if (_selectedOption == null) return;
 
     setState(() {

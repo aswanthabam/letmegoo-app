@@ -53,9 +53,7 @@ class _PhoneNumberPageState extends State<PhoneNumberPage> {
           });
 
           // Log more details for debugging
-          print("Verification failed: ${e.code} - ${e.message}");
-          print("Phone number: $formattedPhoneNumber");
-
+        
           _handleVerificationError(e);
         },
         codeSent: (String verificationId, int? resendToken) {

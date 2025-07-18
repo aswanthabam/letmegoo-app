@@ -30,9 +30,7 @@ class ReportStateNotifier
   Future<void> reportVehicle(ReportRequest request) async {
     state = const AsyncValue.loading();
     try {
-      print(request);
       final result = await AuthService.reportVehicle(request);
-      print('Report submitted successfully: $result');
       if (mounted) {
         state = AsyncValue.data(result);
       }
@@ -52,21 +50,16 @@ class VehicleSearchNotifier extends StateNotifier<AsyncValue<Vehicle?>> {
   VehicleSearchNotifier() : super(const AsyncValue.data(null));
 
   Future<void> searchVehicle(String registrationNumber) async {
-    print("error--");
-
     state = const AsyncValue.loading();
     try {
       final vehicle = await AuthService.getVehicleByRegistrationNumber(
         registrationNumber,
       );
-      print(vehicle);
-      print(mounted);
+
       if (mounted) {
         state = AsyncValue.data(vehicle);
       }
     } catch (e) {
-      print("error--");
-      print(e);
       if (mounted) {
         state = AsyncValue.error(e, StackTrace.current);
       }
@@ -225,8 +218,6 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
       isAnonymous: isAnonymous,
       notes: message,
     );
-    print(request.vehicleId);
-    print(request.isAnonymous);
 
     ref.read(reportStateProvider.notifier).reportVehicle(request);
   }
@@ -242,7 +233,6 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     ref.listen<AsyncValue<Vehicle?>>(vehicleSearchProvider, (previous, next) {
       next.when(
         data: (vehicle) {
-          print("ui data $vehicle");
           if (vehicle != null) {
             // Navigate to notify page with vehicle data
             Navigator.push(
@@ -273,7 +263,6 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
           }
         },
         error: (error, stackTrace) {
-          print("Error searching vehicle: $error");
           _showFullScreenDialog(
             "Error",
             "Failed to search vehicle. Please try again.",
