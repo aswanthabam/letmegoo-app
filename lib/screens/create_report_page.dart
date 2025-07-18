@@ -8,7 +8,7 @@ import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
 import 'package:letmegoo/models/report_request.dart';
 import 'package:letmegoo/models/vehicle.dart';
-import 'package:letmegoo/notify.dart';
+import 'package:letmegoo/screens/vehicle_found_page.dart';
 
 // State Management with Riverpod
 final reportStateProvider = StateNotifierProvider<
@@ -237,7 +237,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             // Navigate to notify page with vehicle data
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => Notify(vehicle: vehicle)),
+              MaterialPageRoute(
+                builder: (context) => VehicleFoundPage(vehicle: vehicle),
+              ),
             );
             // ref.read(vehicleSearchProvider.notifier).resetState();
           } else {
