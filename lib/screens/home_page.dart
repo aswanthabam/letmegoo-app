@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:letmegoo/constants/app_theme.dart';
-import 'package:letmegoo/models/report.dart';
-import 'package:letmegoo/services/auth_service.dart';
+import 'package:letmegoo/providers/report_providers.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../widgets/buildreportsection.dart';
 import '../widgets/builddivider.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   final Function(int) onNavigate;
   final VoidCallback onAddPressed;
 
@@ -17,83 +17,152 @@ class HomePage extends StatefulWidget {
   });
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  // Loading and error states
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  // Report data
-  List<Report> _liveReportingsByYou = [];
-  List<Report> _liveReportingsAgainstYou = [];
-  List<Report> _solvedReportingsByYou = [];
-  List<Report> _solvedReportingsAgainstYou = [];
+class _HomePageState extends ConsumerState<HomePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // Keep state alive for better performance
 
   @override
   void initState() {
     super.initState();
-    _loadReports();
+    // Load reports on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReportsIfNeeded();
+    });
   }
 
-  /// Load all reports from API
-  Future<void> _loadReports() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
+  void _loadReportsIfNeeded() {
+    final cache = ref.read(reportsCacheProvider.notifier);
+    final reportsNotifier = ref.read(reportsProvider.notifier);
+
+    // Load only if cache is invalid or no data exists
+    if (!cache.isCacheValid || ref.read(reportsProvider).totalReports == 0) {
+      reportsNotifier.loadReports().then((_) {
+        cache.updateCacheTime();
       });
-
-      // Fetch all reports concurrently for better performance
-      final results = await AuthService.getAllReports();
-
-      if (mounted) {
-        setState(() {
-          _liveReportingsByYou = results['liveByUser'] ?? [];
-          _liveReportingsAgainstYou = results['liveAgainstUser'] ?? [];
-          _solvedReportingsByYou = results['solvedByUser'] ?? [];
-          _solvedReportingsAgainstYou = results['solvedAgainstUser'] ?? [];
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = _getErrorMessage(e);
-        });
-      }
     }
   }
 
-  /// Get user-friendly error message
-  String _getErrorMessage(dynamic error) {
-    if (error is ConnectivityException) {
-      return 'No internet connection. Please check your network.';
-    } else if (error is AuthException) {
-      return 'Authentication error. Please login again.';
-    } else if (error is ApiException) {
-      return 'Server error. Please try again later.';
-    } else {
-      return 'Something went wrong. Please try again.';
-    }
-  }
-
-  /// Refresh data
   Future<void> _onRefresh() async {
-    await _loadReports();
+    final reportsNotifier = ref.read(reportsProvider.notifier);
+    final cache = ref.read(reportsCacheProvider.notifier);
+
+    await reportsNotifier.refresh();
+    cache.updateCacheTime();
   }
 
-  /// Convert Report objects to widget format
-  List<Map<String, dynamic>> _convertReportsToWidgetFormat(
-    List<Report> reports,
-  ) {
-    return reports.map((report) => report.toWidgetFormat()).toList();
-  }
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
 
-  /// Build loading widget
-  Widget _buildLoadingWidget(double screenHeight) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isTablet = screenWidth > 600;
+    final isLargeScreen = screenWidth > 900;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: MediaQuery.removePadding(
+        context: context,
+        removeBottom: true,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Main Content
+              Expanded(
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final reportsState = ref.watch(reportsProvider);
+
+                    // Watch formatted data for widgets
+                    final liveByUserFormatted = ref.watch(
+                      liveReportsByUserFormattedProvider,
+                    );
+                    final liveAgainstUserFormatted = ref.watch(
+                      liveReportsAgainstUserFormattedProvider,
+                    );
+                    final solvedByUserFormatted = ref.watch(
+                      solvedReportsByUserFormattedProvider,
+                    );
+                    final solvedAgainstUserFormatted = ref.watch(
+                      solvedReportsAgainstUserFormattedProvider,
+                    );
+
+                    return RefreshIndicator(
+                      onRefresh: _onRefresh,
+                      color: const Color(0xFF31C5F4),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.02,
+                        ),
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: isLargeScreen ? 900 : double.infinity,
+                          ),
+                          child:
+                              reportsState.isLoading
+                                  ? _LoadingWidget(screenHeight: screenHeight)
+                                  : reportsState.error != null
+                                  ? _ErrorWidget(
+                                    screenHeight: screenHeight,
+                                    errorMessage: reportsState.error!,
+                                    onRetry:
+                                        () =>
+                                            ref
+                                                .read(reportsProvider.notifier)
+                                                .loadReports(),
+                                  )
+                                  : reportsState.hasNoReports
+                                  ? _EmptyWidget(
+                                    screenHeight: screenHeight,
+                                    screenWidth: screenWidth,
+                                  )
+                                  : _ReportsContent(
+                                    screenWidth: screenWidth,
+                                    screenHeight: screenHeight,
+                                    isTablet: isTablet,
+                                    isLargeScreen: isLargeScreen,
+                                    liveByUserFormatted: liveByUserFormatted,
+                                    liveAgainstUserFormatted:
+                                        liveAgainstUserFormatted,
+                                    solvedByUserFormatted:
+                                        solvedByUserFormatted,
+                                    solvedAgainstUserFormatted:
+                                        solvedAgainstUserFormatted,
+                                  ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Bottom Navigation
+              CustomBottomNav(
+                currentIndex: 0,
+                onTap: widget.onNavigate,
+                onInformPressed: widget.onAddPressed,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Separated widgets for better performance and readability
+class _LoadingWidget extends StatelessWidget {
+  final double screenHeight;
+
+  const _LoadingWidget({required this.screenHeight});
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       height: screenHeight * 0.88,
       width: double.infinity,
@@ -114,9 +183,21 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
 
-  /// Build error widget
-  Widget _buildErrorWidget(double screenHeight) {
+class _ErrorWidget extends StatelessWidget {
+  final double screenHeight;
+  final String errorMessage;
+  final VoidCallback onRetry;
+
+  const _ErrorWidget({
+    required this.screenHeight,
+    required this.errorMessage,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       height: screenHeight * 0.88,
       width: double.infinity,
@@ -127,13 +208,13 @@ class _HomePageState extends State<HomePage> {
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              _errorMessage ?? 'An error occurred',
+              errorMessage,
               style: const TextStyle(fontSize: 16, color: Colors.red),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadReports,
+              onPressed: onRetry,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF31C5F4),
                 foregroundColor: Colors.white,
@@ -145,9 +226,16 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
 
-  /// Build empty state widget
-  Widget _buildEmptyWidget(double screenHeight, double screenWidth) {
+class _EmptyWidget extends StatelessWidget {
+  final double screenHeight;
+  final double screenWidth;
+
+  const _EmptyWidget({required this.screenHeight, required this.screenWidth});
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       height: screenHeight * 0.88,
       width: double.infinity,
@@ -170,133 +258,87 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class _ReportsContent extends StatelessWidget {
+  final double screenWidth;
+  final double screenHeight;
+  final bool isTablet;
+  final bool isLargeScreen;
+  final List<Map<String, dynamic>> liveByUserFormatted;
+  final List<Map<String, dynamic>> liveAgainstUserFormatted;
+  final List<Map<String, dynamic>> solvedByUserFormatted;
+  final List<Map<String, dynamic>> solvedAgainstUserFormatted;
+
+  const _ReportsContent({
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.isTablet,
+    required this.isLargeScreen,
+    required this.liveByUserFormatted,
+    required this.liveAgainstUserFormatted,
+    required this.solvedByUserFormatted,
+    required this.solvedAgainstUserFormatted,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isTablet = screenWidth > 600;
-    final isLargeScreen = screenWidth > 900;
-
-    // Check if all reports are empty
-    final allReportsEmpty =
-        _liveReportingsByYou.isEmpty &&
-        _liveReportingsAgainstYou.isEmpty &&
-        _solvedReportingsByYou.isEmpty &&
-        _solvedReportingsAgainstYou.isEmpty;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: MediaQuery.removePadding(
-        context: context,
-        removeBottom: true,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Main Content
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _onRefresh,
-                  color: const Color(0xFF31C5F4),
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.02,
-                    ),
-                    child: Container(
-                      constraints: BoxConstraints(
-                        maxWidth: isLargeScreen ? 900 : double.infinity,
-                      ),
-                      child:
-                          _isLoading
-                              ? _buildLoadingWidget(screenHeight)
-                              : _errorMessage != null
-                              ? _buildErrorWidget(screenHeight)
-                              : allReportsEmpty
-                              ? _buildEmptyWidget(screenHeight, screenWidth)
-                              : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (_liveReportingsByYou.isNotEmpty) ...[
-                                    buildReportSection(
-                                      context: context,
-                                      title:
-                                          "Live Reportings By You (${_liveReportingsByYou.length})",
-                                      reports: _convertReportsToWidgetFormat(
-                                        _liveReportingsByYou,
-                                      ),
-                                      screenWidth: screenWidth,
-                                      isTablet: isTablet,
-                                      isLargeScreen: isLargeScreen,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.02),
-                                    buildDivider(screenWidth),
-                                    SizedBox(height: screenHeight * 0.02),
-                                  ],
-                                  if (_liveReportingsAgainstYou.isNotEmpty) ...[
-                                    buildReportSection(
-                                      context: context,
-                                      title:
-                                          "Live Reportings Against You (${_liveReportingsAgainstYou.length})",
-                                      reports: _convertReportsToWidgetFormat(
-                                        _liveReportingsAgainstYou,
-                                      ),
-                                      screenWidth: screenWidth,
-                                      isTablet: isTablet,
-                                      isLargeScreen: isLargeScreen,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.02),
-                                    buildDivider(screenWidth),
-                                    SizedBox(height: screenHeight * 0.02),
-                                  ],
-                                  if (_solvedReportingsByYou.isNotEmpty) ...[
-                                    buildReportSection(
-                                      context: context,
-                                      title:
-                                          "Solved Reportings By You (${_solvedReportingsByYou.length})",
-                                      reports: _convertReportsToWidgetFormat(
-                                        _solvedReportingsByYou,
-                                      ),
-                                      screenWidth: screenWidth,
-                                      isTablet: isTablet,
-                                      isLargeScreen: isLargeScreen,
-                                    ),
-                                    SizedBox(height: screenHeight * 0.02),
-                                    buildDivider(screenWidth),
-                                    SizedBox(height: screenHeight * 0.02),
-                                  ],
-                                  if (_solvedReportingsAgainstYou
-                                      .isNotEmpty) ...[
-                                    buildReportSection(
-                                      context: context,
-                                      title:
-                                          "Solved Reportings Against You (${_solvedReportingsAgainstYou.length})",
-                                      reports: _convertReportsToWidgetFormat(
-                                        _solvedReportingsAgainstYou,
-                                      ),
-                                      screenWidth: screenWidth,
-                                      isTablet: isTablet,
-                                      isLargeScreen: isLargeScreen,
-                                    ),
-                                  ],
-                                  SizedBox(height: screenHeight * 0.02),
-                                ],
-                              ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Bottom Navigation
-              CustomBottomNav(
-                currentIndex: 0,
-                onTap: widget.onNavigate,
-                onInformPressed: widget.onAddPressed,
-              ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (liveByUserFormatted.isNotEmpty) ...[
+          buildReportSection(
+            context: context,
+            title: "Live Reportings By You (${liveByUserFormatted.length})",
+            reports: liveByUserFormatted,
+            screenWidth: screenWidth,
+            isTablet: isTablet,
+            isLargeScreen: isLargeScreen,
           ),
-        ),
-      ),
+          SizedBox(height: screenHeight * 0.02),
+          buildDivider(screenWidth),
+          SizedBox(height: screenHeight * 0.02),
+        ],
+        if (liveAgainstUserFormatted.isNotEmpty) ...[
+          buildReportSection(
+            context: context,
+            title:
+                "Live Reportings Against You (${liveAgainstUserFormatted.length})",
+            reports: liveAgainstUserFormatted,
+            screenWidth: screenWidth,
+            isTablet: isTablet,
+            isLargeScreen: isLargeScreen,
+          ),
+          SizedBox(height: screenHeight * 0.02),
+          buildDivider(screenWidth),
+          SizedBox(height: screenHeight * 0.02),
+        ],
+        if (solvedByUserFormatted.isNotEmpty) ...[
+          buildReportSection(
+            context: context,
+            title: "Solved Reportings By You (${solvedByUserFormatted.length})",
+            reports: solvedByUserFormatted,
+            screenWidth: screenWidth,
+            isTablet: isTablet,
+            isLargeScreen: isLargeScreen,
+          ),
+          SizedBox(height: screenHeight * 0.02),
+          buildDivider(screenWidth),
+          SizedBox(height: screenHeight * 0.02),
+        ],
+        if (solvedAgainstUserFormatted.isNotEmpty) ...[
+          buildReportSection(
+            context: context,
+            title:
+                "Solved Reportings Against You (${solvedAgainstUserFormatted.length})",
+            reports: solvedAgainstUserFormatted,
+            screenWidth: screenWidth,
+            isTablet: isTablet,
+            isLargeScreen: isLargeScreen,
+          ),
+        ],
+        SizedBox(height: screenHeight * 0.02),
+      ],
     );
   }
 }
