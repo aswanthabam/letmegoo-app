@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/screens/owner_not_found_page.dart';
 import 'package:letmegoo/services/auth_service.dart';
+import 'package:letmegoo/services/location_service.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
 import 'package:letmegoo/models/report_request.dart';
 import 'package:letmegoo/models/vehicle.dart';
@@ -94,9 +96,11 @@ class CreateReportPage extends ConsumerStatefulWidget {
 class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   final TextEditingController regNumberController = TextEditingController();
   final TextEditingController messageController = TextEditingController();
+  final LocationService _locationService = LocationService();
 
   bool isAnonymous = true;
   List<File> _images = [];
+  bool _isLocationLoading = false;
   bool get isReportMode => widget.registrationNumber != null;
 
   @override
@@ -124,6 +128,59 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
         _images = picked.map((xFile) => File(xFile.path)).toList();
       });
     }
+  }
+
+  Future<Position?> _getCurrentLocation() async {
+    setState(() {
+      _isLocationLoading = true;
+    });
+
+    try {
+      final result = await _locationService.getCurrentLocation();
+      
+      if (result.isSuccess) {
+        return result.position;
+      } else {
+        // Handle different error types
+        switch (result.errorType) {
+          case LocationErrorType.serviceDisabled:
+            LocationService.showLocationServiceDialog(context);
+            break;
+          case LocationErrorType.permissionDenied:
+            LocationService.showPermissionDeniedDialog(
+              context,
+              onRetry: _getCurrentLocation,
+            );
+            break;
+          case LocationErrorType.permissionPermanentlyDenied:
+            LocationService.showPermissionPermanentlyDeniedDialog(context);
+            break;
+          case LocationErrorType.locationError:
+            LocationService.showLocationErrorDialog(
+              context,
+              message: result.errorMessage,
+              onRetry: _getCurrentLocation,
+            );
+            break;
+          default:
+            LocationService.showLocationErrorDialog(context);
+        }
+        return null;
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLocationLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<String> _getAddressFromCoordinates(
+    double latitude,
+    double longitude,
+  ) async {
+    return await _locationService.getAddressFromCoordinates(latitude, longitude);
   }
 
   void _showFullScreenDialog(
@@ -208,7 +265,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     ref.read(vehicleSearchProvider.notifier).searchVehicle(regNumber);
   }
 
-  void _handleInformTap() {
+  void _handleInformTap() async {
     final regNumber = regNumberController.text.trim();
     final message = messageController.text.trim();
 
@@ -222,11 +279,27 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
       return;
     }
 
+    // Get current location
+    Position? position = await _getCurrentLocation();
+    if (position == null) {
+      // Location was not obtained, user was already notified
+      return;
+    }
+
+    // Get address from coordinates (optional)
+    String location = await _getAddressFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+
     final request = ReportRequest(
       vehicleId: regNumber, // Using registration number as vehicleId
       images: _images,
       isAnonymous: isAnonymous,
       notes: message,
+      longitude: position.longitude.toString(),
+      latitude: position.latitude.toString(),
+      location: location,
     );
 
     ref.read(reportStateProvider.notifier).reportVehicle(request);
@@ -750,10 +823,26 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             ),
 
             // Loading overlay
-            if (reportState.isLoading || vehicleSearchState.isLoading)
+            if (reportState.isLoading || vehicleSearchState.isLoading || _isLocationLoading)
               Container(
                 color: Colors.black.withOpacity(0.3),
-                child: const Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      if (_isLocationLoading) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          "Getting your location...",
+                          style: AppFonts.regular16().copyWith(
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
           ],
         ),
@@ -765,6 +854,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     final reportState = ref.watch(reportStateProvider);
     final vehicleSearchState = ref.watch(vehicleSearchProvider);
 
+    if (_isLocationLoading) return "Getting Location...";
     if (reportState.isLoading) return "Submitting...";
     if (vehicleSearchState.isLoading) return "Searching...";
 
@@ -775,7 +865,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     final reportState = ref.watch(reportStateProvider);
     final vehicleSearchState = ref.watch(vehicleSearchProvider);
 
-    if (reportState.isLoading || vehicleSearchState.isLoading) {
+    if (reportState.isLoading || vehicleSearchState.isLoading || _isLocationLoading) {
       return () {};
     }
 
