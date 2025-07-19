@@ -9,19 +9,24 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.initialize();
 
-  // Ensure Firebase is initialized properly
   try {
+    // Initialize Firebase first
     await Firebase.initializeApp(
-      options:
-          DefaultFirebaseOptions.currentPlatform, // Generated Firebase options
+      options: DefaultFirebaseOptions.currentPlatform,
     );
-    runApp(ProviderScope(child: const MyApp()));
+    print("Firebase initialized successfully");
+
+    // Initialize notifications in background - don't await
+    NotificationService.initialize().catchError((e) {
+      print("Notification initialization error: $e");
+    });
   } catch (e) {
-    print("Error initializing Firebase: $e");
-    // Optionally, show an error screen or fallback
+    print("Firebase initialization error: $e");
+    // You might want to show an error screen here
   }
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -32,17 +37,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
-      // Add routes for navigation
       routes: {
         '/splash': (context) => const SplashScreen(),
-        '/login':
-            (context) =>
-                const LoginPage(), // Replace with your actual login page
-        // Add other routes as needed
-        // '/profile': (context) => const ProfilePage(),
-        // '/settings': (context) => const SettingsPage(),
+        '/login': (context) => const LoginPage(),
       },
-      // Handle unknown routes
       onUnknownRoute: (settings) {
         return MaterialPageRoute(builder: (context) => const SplashScreen());
       },
