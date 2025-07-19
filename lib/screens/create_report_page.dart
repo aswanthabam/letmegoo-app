@@ -357,7 +357,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           // Title
                           Text(
-                            isReportMode ? "Inform Owner" : "Search Vehicle",
+                            isReportMode
+                                ? "Inform Owner"
+                                : "Let's get the help",
                             textAlign: TextAlign.center,
                             style: AppFonts.semiBold24().copyWith(
                               fontSize:
@@ -376,7 +378,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                           Text(
                             isReportMode
                                 ? "Fill in the details below so we can alert the\nowner and get things moving quickly."
-                                : "Enter the vehicle registration number to\nsearch for the owner and report the vehicle.",
+                                : "Search whether the vehicle owner blocking\nyour way is registered with us or not!",
                             textAlign: TextAlign.center,
                             style: AppFonts.regular14().copyWith(
                               fontSize:

@@ -54,7 +54,7 @@ class OwnerNotFoundPage extends StatelessWidget {
                           horizontal: isSmallScreen ? 8 : 16,
                         ),
                         child: Text(
-                          "We couldn't find this vehicle's owner on our network yet.\nMaybe they haven't joined the ride — just yet.",
+                          "Oh Sorry!! This vehicle is not added to our\nlist by its owner! 😔",
                           textAlign: TextAlign.center,
                           style:
                               isSmallScreen
