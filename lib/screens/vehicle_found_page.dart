@@ -4,6 +4,7 @@ import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/models/vehicle.dart';
 import 'package:letmegoo/screens/create_report_page.dart';
+import 'package:letmegoo/widgets/commonbutton.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class VehicleFoundPage extends StatefulWidget {
@@ -70,7 +71,7 @@ class _VehicleFoundPageState extends State<VehicleFoundPage> {
 
                       // Responsive image
                       Image.asset(
-                        AppImages.lock_message,
+                        AppImages.lock,
                         height: imageSize,
                         width: imageSize,
                       ),
@@ -394,39 +395,9 @@ class _VehicleFoundPageState extends State<VehicleFoundPage> {
                             SizedBox(height: isSmallScreen ? 8 : 16),
 
                           // Report button (always visible)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () => _goToReportPage(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: buttonVerticalPadding,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.report,
-                                    color: Colors.white,
-                                    size: isSmallScreen ? 18 : 20,
-                                  ),
-                                  SizedBox(width: screenWidth * 0.02),
-                                  Text(
-                                    "Report Vehicle",
-                                    style: AppFonts.semiBold16(
-                                      color: Colors.white,
-                                    ).copyWith(
-                                      fontSize: isSmallScreen ? 14 : 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          CommonButton(
+                            text: "Inform Owner",
+                            onTap: _goToReportPage,
                           ),
                         ],
                       ),
@@ -465,15 +436,28 @@ class _VehicleFoundPageState extends State<VehicleFoundPage> {
   }
 
   void _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    // Clean the phone number (remove spaces, dashes, etc.)
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+
+    final Uri launchUri = Uri(scheme: 'tel', path: cleanNumber);
+
+    print('Attempting to call: $cleanNumber'); // Debug log
+    print('Launch URI: $launchUri'); // Debug log
 
     try {
       if (await canLaunchUrl(launchUri)) {
-        await launchUrl(launchUri);
+        await launchUrl(
+          launchUri,
+          mode: LaunchMode.externalApplication, // Force external app
+        );
       } else {
-        _showErrorSnackBar('Could not launch phone dialer');
+        print('Cannot launch URL: $launchUri'); // Debug log
+        _showErrorSnackBar(
+          'Could not launch phone dialer. Phone app may not be available.',
+        );
       }
     } catch (e) {
+      print('Error launching phone dialer: $e'); // Debug log
       _showErrorSnackBar('Error launching phone dialer: $e');
     }
   }

@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/screens/owner_not_found_page.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
 import 'package:letmegoo/models/report_request.dart';
 import 'package:letmegoo/models/vehicle.dart';
 import 'package:letmegoo/screens/vehicle_found_page.dart';
+import 'package:letmegoo/widgets/main_app.dart';
 
 // State Management with Riverpod
 final reportStateProvider = StateNotifierProvider<
@@ -244,23 +246,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             // ref.read(vehicleSearchProvider.notifier).resetState();
           } else {
             // Show vehicle not registered dialog
-            _showFullScreenDialog(
-              "Vehicle Not Found",
-              "This vehicle is not registered with us. You can still report this vehicle if it's causing an obstruction.",
-              isError: true,
-              onOkPressed: () {
-                Navigator.of(context).pop();
-                // Navigate to report mode
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => CreateReportPage(
-                          registrationNumber: regNumberController.text.trim(),
-                        ),
-                  ),
-                );
-              },
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => OwnerNotFoundPage()),
             );
           }
         },
@@ -287,6 +275,15 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             _showFullScreenDialog(
               "Report Submitted",
               "Your report has been submitted successfully. The vehicle owner will be notified.",
+              onOkPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => MainApp(),
+                  ), // Replace with your home page widget
+                  (Route<dynamic> route) => false,
+                );
+              },
             );
             ref.read(reportStateProvider.notifier).resetState();
           }

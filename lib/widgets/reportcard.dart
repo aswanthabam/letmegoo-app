@@ -1,6 +1,5 @@
 // lib/widgets/reportcard.dart
 import 'package:flutter/material.dart';
-import 'package:letmegoo/message2.dart';
 import '../constants/app_theme.dart';
 
 class ReportCard extends StatelessWidget {
@@ -45,12 +44,12 @@ class ReportCard extends StatelessWidget {
     }
 
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const Message2()),
-        );
-      },
+      // onTap: () {
+      //   Navigator.push(
+      //     context,
+      //     MaterialPageRoute(builder: (context) => const Message2()),
+      //   );
+      // },
       child: Container(
         width: double.infinity, // Full width
         margin: EdgeInsets.symmetric(
