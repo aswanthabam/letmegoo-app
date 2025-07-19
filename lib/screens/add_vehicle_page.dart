@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
+import 'package:letmegoo/screens/privacy_preferences_page.dart';
+import 'package:letmegoo/utils/core_utils.dart';
 import 'package:letmegoo/widgets/commonbutton.dart';
-import 'package:letmegoo/widgets/main_app.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import 'package:letmegoo/models/vehicle_type.dart';
 import 'vehicle_add_success_page.dart';
@@ -791,10 +792,16 @@ class _AddVehiclePageState extends State<AddVehiclePage> {
                         _isLoading
                             ? null
                             : () {
-                              Navigator.pushReplacement(
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const MainApp(),
+                                  builder:
+                                      (context) => PrivacyPreferencesPage(
+                                        currentPreference: 'private',
+                                        onPreferenceChanged: (p0) {
+                                          CoreUtil.goToHomePage(context);
+                                        },
+                                      ),
                                 ),
                               );
                             },

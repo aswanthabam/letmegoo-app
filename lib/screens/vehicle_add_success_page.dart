@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/screens/add_vehicle_page.dart';
+import 'package:letmegoo/screens/privacy_preferences_page.dart';
+import 'package:letmegoo/utils/core_utils.dart';
 import 'package:letmegoo/widgets/commonButton.dart';
-import 'package:letmegoo/widgets/main_app.dart';
 
 class VehicleAddSuccessPage extends StatefulWidget {
   const VehicleAddSuccessPage({super.key});
@@ -122,10 +123,16 @@ class _VehicleAddSuccessPageState extends State<VehicleAddSuccessPage>
                     CommonButton(
                       text: "Go to Next Step",
                       onTap: () {
-                        Navigator.push(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const MainApp(),
+                            builder:
+                                (context) => PrivacyPreferencesPage(
+                                  currentPreference: 'private',
+                                  onPreferenceChanged: (p0) {
+                                    CoreUtil.goToHomePage(context);
+                                  },
+                                ),
                           ),
                         );
                       },
