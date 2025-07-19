@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:letmegoo/services/device_service.dart';
 
 class GoogleAuthService {
   // Use a singleton pattern for the GoogleSignIn instance
@@ -18,11 +19,9 @@ class GoogleAuthService {
   /// Handles user cancellation gracefully by returning null without throwing an error.
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      // 1. Trigger the Google authentication flow.
-      // This will open the Google Sign-In dialog.
+      // Existing Google sign-in code...
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      // If the user cancels the sign-in flow, googleUser will be null.
       if (googleUser == null) {
         if (kDebugMode) {
           print('Google Sign In: User cancelled the sign-in process.');
@@ -34,7 +33,6 @@ class GoogleAuthService {
         print('Google Sign In: User signed in -> ${googleUser.email}');
       }
 
-      // 2. Obtain the authentication tokens from the signed-in Google user.
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
@@ -42,7 +40,6 @@ class GoogleAuthService {
         print('Google Auth: Obtained access and ID tokens.');
       }
 
-      // 3. Create a Firebase credential using the Google tokens.
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -52,7 +49,6 @@ class GoogleAuthService {
         print('Google Auth: Created Firebase credential.');
       }
 
-      // 4. Sign in to Firebase with the credential.
       final UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
@@ -63,17 +59,26 @@ class GoogleAuthService {
         );
       }
 
+      // Register device after successful login
+      try {
+        await DeviceService.registerDevice();
+        if (kDebugMode) {
+          print('Device registered successfully for push notifications');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Device registration failed: $e');
+        }
+        // Don't fail the login process if device registration fails
+      }
+
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      // Handle specific Firebase authentication errors
       if (kDebugMode) {
         print('Firebase Auth Error: [${e.code}] ${e.message}');
       }
-      // Depending on your app's needs, you might want to show a user-friendly
-      // message here instead of rethrowing.
       return null;
     } catch (e) {
-      // Handle other errors (e.g., network issues, plugin errors)
       if (kDebugMode) {
         print('An unexpected error occurred during Google Sign In: $e');
       }
@@ -87,7 +92,19 @@ class GoogleAuthService {
       if (kDebugMode) {
         print('Signing out from Google and Firebase...');
       }
-      // Signing out from both services ensures a clean logout.
+
+      // Unregister device before signing out
+      try {
+        await DeviceService.unregisterDevice();
+        if (kDebugMode) {
+          print('Device unregistered successfully');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Device unregister failed: $e');
+        }
+      }
+
       await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
       if (kDebugMode) {
         print('Sign out successful.');
@@ -96,8 +113,6 @@ class GoogleAuthService {
       if (kDebugMode) {
         print('Error during sign out: $e');
       }
-      // You might want to handle this error, though it's less critical
-      // than a sign-in error.
     }
   }
 

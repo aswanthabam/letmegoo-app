@@ -7,6 +7,7 @@ import 'package:letmegoo/models/user_model.dart';
 import 'package:letmegoo/screens/user_detail_reg_page.dart';
 import 'package:letmegoo/screens/welcome_page.dart';
 import 'package:letmegoo/services/auth_service.dart';
+import 'package:letmegoo/services/device_service.dart'; // Add this import
 import 'package:letmegoo/widgets/commonbutton.dart';
 import 'package:letmegoo/widgets/main_app.dart';
 
@@ -84,6 +85,9 @@ class _OtpPageState extends State<OtpPage> {
       if (userCredential.user != null) {
         _showSnackBar("Phone number verified successfully!", isError: false);
 
+        // Register device for push notifications
+        await _registerDeviceAfterLogin();
+
         // Apply the same validation logic as splash screen
         await _checkUserProfileAndNavigate();
       }
@@ -137,6 +141,18 @@ class _OtpPageState extends State<OtpPage> {
     }
   }
 
+  /// Register device for push notifications after successful login
+  Future<void> _registerDeviceAfterLogin() async {
+    try {
+      await DeviceService.registerDevice();
+      print('Device registered successfully for phone login');
+    } catch (e) {
+      print('Device registration failed for phone login: $e');
+      // Don't fail the login process if device registration fails
+      // This is a non-critical operation
+    }
+  }
+
   Future<void> _checkUserProfileAndNavigate() async {
     try {
       // Check if user profile is complete via API
@@ -178,6 +194,9 @@ class _OtpPageState extends State<OtpPage> {
       );
       if (userCredential.user != null) {
         _showSnackBar("Phone number verified successfully!", isError: false);
+
+        // Register device for push notifications
+        await _registerDeviceAfterLogin();
 
         // Apply the same validation logic as splash screen
         await _checkUserProfileAndNavigate();
@@ -249,13 +268,12 @@ class _OtpPageState extends State<OtpPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           color: AppColors.textPrimary,
-          iconSize:
-              screenWidth *
+          iconSize: screenWidth *
               (isLargeScreen
                   ? 0.025
                   : isTablet
-                  ? 0.035
-                  : 0.06),
+                      ? 0.035
+                      : 0.06),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -276,20 +294,18 @@ class _OtpPageState extends State<OtpPage> {
                       // Lock Image
                       Image.asset(
                         AppImages.lock,
-                        height:
-                            screenWidth *
+                        height: screenWidth *
                             (isLargeScreen
                                 ? 0.15
                                 : isTablet
-                                ? 0.2
-                                : 0.35),
-                        width:
-                            screenWidth *
+                                    ? 0.2
+                                    : 0.35),
+                        width: screenWidth *
                             (isLargeScreen
                                 ? 0.15
                                 : isTablet
-                                ? 0.2
-                                : 0.35),
+                                    ? 0.2
+                                    : 0.35),
                         fit: BoxFit.contain,
                       ),
 
@@ -298,10 +314,9 @@ class _OtpPageState extends State<OtpPage> {
                       // Content Container
                       Container(
                         constraints: BoxConstraints(
-                          maxWidth:
-                              isLargeScreen
-                                  ? 500
-                                  : isTablet
+                          maxWidth: isLargeScreen
+                              ? 500
+                              : isTablet
                                   ? 400
                                   : double.infinity,
                         ),
@@ -311,13 +326,12 @@ class _OtpPageState extends State<OtpPage> {
                             Text(
                               "OTP Verification",
                               style: AppFonts.semiBold24().copyWith(
-                                fontSize:
-                                    screenWidth *
+                                fontSize: screenWidth *
                                     (isLargeScreen
                                         ? 0.025
                                         : isTablet
-                                        ? 0.035
-                                        : 0.055),
+                                            ? 0.035
+                                            : 0.055),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -330,13 +344,12 @@ class _OtpPageState extends State<OtpPage> {
                               style: AppFonts.regular13(
                                 color: AppColors.textSecondary,
                               ).copyWith(
-                                fontSize:
-                                    screenWidth *
+                                fontSize: screenWidth *
                                     (isLargeScreen
                                         ? 0.014
                                         : isTablet
-                                        ? 0.025
-                                        : 0.035),
+                                            ? 0.025
+                                            : 0.035),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -349,21 +362,19 @@ class _OtpPageState extends State<OtpPage> {
                               children: List.generate(6, (index) {
                                 return Container(
                                   margin: EdgeInsets.symmetric(
-                                    horizontal:
-                                        screenWidth *
+                                    horizontal: screenWidth *
                                         (isLargeScreen
                                             ? 0.01
                                             : isTablet
-                                            ? 0.015
-                                            : 0.02),
+                                                ? 0.015
+                                                : 0.02),
                                   ),
-                                  width:
-                                      screenWidth *
+                                  width: screenWidth *
                                       (isLargeScreen
                                           ? 0.05
                                           : isTablet
-                                          ? 0.07
-                                          : 0.1),
+                                              ? 0.07
+                                              : 0.1),
                                   child: TextField(
                                     controller: _controllers[index],
                                     focusNode: _focusNodes[index],
@@ -372,13 +383,12 @@ class _OtpPageState extends State<OtpPage> {
                                     textAlign: TextAlign.center,
                                     enabled: !_isLoading,
                                     style: TextStyle(
-                                      fontSize:
-                                          screenWidth *
+                                      fontSize: screenWidth *
                                           (isLargeScreen
                                               ? 0.018
                                               : isTablet
-                                              ? 0.025
-                                              : 0.05),
+                                                  ? 0.025
+                                                  : 0.05),
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary,
                                     ),
@@ -412,9 +422,8 @@ class _OtpPageState extends State<OtpPage> {
                                         horizontal: screenWidth * 0.02,
                                       ),
                                     ),
-                                    onChanged:
-                                        (value) =>
-                                            _handleOtpChange(value, index),
+                                    onChanged: (value) =>
+                                        _handleOtpChange(value, index),
                                   ),
                                 );
                               }),
@@ -424,26 +433,24 @@ class _OtpPageState extends State<OtpPage> {
 
                             // Resend OTP Section
                             Container(
-                              width:
-                                  screenWidth *
+                              width: screenWidth *
                                   (isLargeScreen
                                       ? 0.3
                                       : isTablet
-                                      ? 0.5
-                                      : 0.6),
+                                          ? 0.5
+                                          : 0.6),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
                                     "Didn't get OTP yet? ",
                                     style: AppFonts.regular13().copyWith(
-                                      fontSize:
-                                          screenWidth *
+                                      fontSize: screenWidth *
                                           (isLargeScreen
                                               ? 0.014
                                               : isTablet
-                                              ? 0.022
-                                              : 0.035),
+                                                  ? 0.022
+                                                  : 0.035),
                                     ),
                                   ),
                                   GestureDetector(
@@ -455,13 +462,12 @@ class _OtpPageState extends State<OtpPage> {
                                       style: AppFonts.regular13(
                                         color: AppColors.primary,
                                       ).copyWith(
-                                        fontSize:
-                                            screenWidth *
+                                        fontSize: screenWidth *
                                             (isLargeScreen
                                                 ? 0.014
                                                 : isTablet
-                                                ? 0.022
-                                                : 0.035),
+                                                    ? 0.022
+                                                    : 0.035),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -487,10 +493,9 @@ class _OtpPageState extends State<OtpPage> {
               child: CommonButton(
                 text: _isLoading ? "Verifying..." : "Continue",
                 onTap: _isLoading ? () {} : _verifyOtp,
-                backgroundColor:
-                    _isLoading
-                        ? AppColors.textSecondary.withOpacity(0.3)
-                        : AppColors.primary,
+                backgroundColor: _isLoading
+                    ? AppColors.textSecondary.withOpacity(0.3)
+                    : AppColors.primary,
                 isEnabled: !_isLoading,
               ),
             ),

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:letmegoo/screens/splash_screen.dart';
 import 'package:letmegoo/screens/login_page.dart';
+import 'package:letmegoo/services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.initialize();
 
   // Ensure Firebase is initialized properly
   try {

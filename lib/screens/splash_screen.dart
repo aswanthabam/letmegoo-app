@@ -5,6 +5,7 @@ import 'package:letmegoo/constants/app_images.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/models/login_method.dart';
 import 'package:letmegoo/services/auth_service.dart';
+import 'package:letmegoo/services/device_service.dart'; // Add this import
 import 'package:letmegoo/models/user_model.dart';
 import 'package:letmegoo/screens/login_page.dart';
 import 'package:letmegoo/screens/user_detail_reg_page.dart';
@@ -26,6 +27,8 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _logoFade;
   late Animation<double> _textFade;
   late Animation<Offset> _textSlide;
+
+  String _loadingText = 'Loading...';
 
   @override
   void initState() {
@@ -83,8 +86,18 @@ class _SplashScreenState extends State<SplashScreen>
     await _checkAuthenticationStatus();
   }
 
+  void _updateLoadingText(String text) {
+    if (mounted) {
+      setState(() {
+        _loadingText = text;
+      });
+    }
+  }
+
   Future<void> _checkAuthenticationStatus() async {
     try {
+      _updateLoadingText('Checking authentication...');
+
       // Check if Firebase user exists
       final User? firebaseUser = FirebaseAuth.instance.currentUser;
 
@@ -93,6 +106,8 @@ class _SplashScreenState extends State<SplashScreen>
         _navigateToLogin();
         return;
       }
+
+      _updateLoadingText('Authenticating with server...');
 
       // Firebase user exists, authenticate with API
       final Map<String, dynamic>? userData =
@@ -104,21 +119,49 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
+      _updateLoadingText('Setting up notifications...');
+
+      // Check and ensure device is registered for push notifications
+      await _ensureDeviceRegistration();
+
+      _updateLoadingText('Loading profile...');
+
       // Parse user data
       final UserModel user = UserModel.fromJson(userData);
 
       // Check if user has valid username
       if (user.fullname != "Unknown User" && user.phoneNumber != null) {
         // User has complete profile, navigate to home
+        _updateLoadingText('Welcome back!');
+        await Future.delayed(const Duration(milliseconds: 500));
         _navigateToHome();
       } else {
         // User needs to complete profile, navigate to user details
+        _updateLoadingText('Setting up profile...');
+        await Future.delayed(const Duration(milliseconds: 500));
         _navigateToUserDetails();
       }
     } catch (e) {
       print('Authentication check error: $e');
+      _updateLoadingText('Something went wrong...');
+      await Future.delayed(const Duration(milliseconds: 1000));
       // On error, navigate to login for safety
       _navigateToLogin();
+    }
+  }
+
+  /// Ensure device is registered for push notifications
+  Future<void> _ensureDeviceRegistration() async {
+    try {
+      final isRegistered = await DeviceService.ensureDeviceRegistered();
+      if (isRegistered) {
+        print('Device registration confirmed');
+      } else {
+        print('Device registration failed, but continuing...');
+      }
+    } catch (e) {
+      print('Device registration error: $e');
+      // Don't block the app flow if device registration fails
     }
   }
 
@@ -138,27 +181,14 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder:
-            (_, __, ___) => const MainApp(), // Your main app with bottom nav
+        pageBuilder: (_, __, ___) => const MainApp(),
         transitionsBuilder:
             (_, animation, __, child) =>
                 FadeTransition(opacity: animation, child: child),
       ),
     );
-    // Navigator.of(context).pushReplacement(
-    //   PageRouteBuilder(
-    //     transitionDuration: const Duration(milliseconds: 600),
-    //     pageBuilder:
-    //         (_, __, ___) =>
-    //             const AddVehiclePage(), // Your main app with bottom nav
-    //     transitionsBuilder:
-    //         (_, animation, __, child) =>
-    //             FadeTransition(opacity: animation, child: child),
-    //   ),
-    // );
   }
 
-  // In your splash_screen.dart, update the _navigateToUserDetails method:
   void _navigateToUserDetails() {
     // Determine login method
     final User? user = FirebaseAuth.instance.currentUser;
@@ -300,20 +330,24 @@ class _SplashScreenState extends State<SplashScreen>
 
               SizedBox(height: screenHeight * 0.02),
 
-              // Loading Text
+              // Dynamic Loading Text
               FadeTransition(
                 opacity: _textFade,
-                child: Text(
-                  'Loading...',
-                  style: AppFonts.regular14().copyWith(
-                    fontSize:
-                        screenWidth *
-                        (isLargeScreen
-                            ? 0.016
-                            : isTablet
-                            ? 0.025
-                            : 0.035),
-                    color: AppColors.textSecondary,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    _loadingText,
+                    key: ValueKey(_loadingText),
+                    style: AppFonts.regular14().copyWith(
+                      fontSize:
+                          screenWidth *
+                          (isLargeScreen
+                              ? 0.016
+                              : isTablet
+                              ? 0.025
+                              : 0.035),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
