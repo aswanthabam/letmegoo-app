@@ -335,7 +335,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
                           // Angry Lock Image
                           Image.asset(
-                            AppImages.angry_lock,
+                            AppImages.home,
                             height:
                                 screenWidth *
                                 (isLargeScreen
