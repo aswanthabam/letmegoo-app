@@ -13,4 +13,5 @@ class AppImages {
   static const String vehicle_not_found =
       'assets/images/vehicle_not_found.webp';
   static const String home = 'assets/images/home.jpg';
+  static const String logo = 'assets/icon/app_icon.png';
 }
