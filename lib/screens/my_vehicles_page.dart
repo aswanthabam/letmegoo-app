@@ -29,7 +29,9 @@ class _MyVehiclesPageState extends ConsumerState<MyVehiclesPage> {
 
   Future<void> _deleteVehicle(String vehicleId) async {
     try {
-      final bool success = await ref.read(vehicleProvider.notifier).deleteVehicle(vehicleId);
+      final bool success = await ref
+          .read(vehicleProvider.notifier)
+          .deleteVehicle(vehicleId);
 
       if (success) {
         _showSnackBar('Vehicle deleted successfully', isError: false);
@@ -220,7 +222,11 @@ class _MyVehiclesPageState extends ConsumerState<MyVehiclesPage> {
                     if (vehicleState.isLoading) ...[
                       _buildLoadingState(screenWidth, screenHeight),
                     ] else if (vehicleState.errorMessage != null) ...[
-                      _buildErrorState(screenWidth, screenHeight, vehicleState.errorMessage!),
+                      _buildErrorState(
+                        screenWidth,
+                        screenHeight,
+                        vehicleState.errorMessage!,
+                      ),
                     ] else if (vehicleState.vehicles.isEmpty) ...[
                       _buildEmptyState(screenWidth, screenHeight),
                     ] else ...[
@@ -264,7 +270,11 @@ class _MyVehiclesPageState extends ConsumerState<MyVehiclesPage> {
     );
   }
 
-  Widget _buildErrorState(double screenWidth, double screenHeight, String errorMessage) {
+  Widget _buildErrorState(
+    double screenWidth,
+    double screenHeight,
+    String errorMessage,
+  ) {
     return SizedBox(
       height: screenHeight * 0.4,
       child: Center(
@@ -290,7 +300,8 @@ class _MyVehiclesPageState extends ConsumerState<MyVehiclesPage> {
             ),
             SizedBox(height: screenHeight * 0.03),
             ElevatedButton(
-              onPressed: () => ref.read(vehicleProvider.notifier).refreshVehicles(),
+              onPressed:
+                  () => ref.read(vehicleProvider.notifier).refreshVehicles(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
@@ -369,52 +380,73 @@ class _MyVehiclesPageState extends ConsumerState<MyVehiclesPage> {
         ),
         SizedBox(height: screenHeight * 0.02),
 
-        ...vehicles
-            .map(
-              (vehicle) => Container(
-                margin: EdgeInsets.only(bottom: screenHeight * 0.02),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.background, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.10),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                      spreadRadius: 0,
-                    ),
-                  ],
+        ...vehicles.map((vehicle) {
+          final String vehicleTypeDisplayMap = ref
+              .read(vehicleProvider.notifier)
+              .getVehicleTypeDisplay(vehicle.vehicleType);
+
+          // Parse the map string format instead of JSON
+          final vehicleTypeDisplay = _parseMapString(vehicleTypeDisplayMap);
+
+          return Container(
+            margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.background, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                  spreadRadius: 0,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Colors.white, Colors.grey.withOpacity(0.02)],
-                      ),
-                    ),
-                    child: Vehicletile(
-                      number: vehicle.vehicleNumber,
-                      type: ref.read(vehicleProvider.notifier).getVehicleTypeDisplay(
-                        vehicle.vehicleType,
-                      ), // Updated to use provider method
-                      brand: vehicle.brand ?? 'Unknown',
-                      model: vehicle.name.isNotEmpty ? vehicle.name : 'Vehicle',
-                      image: vehicle.imageUrl,
-                      isVerified: vehicle.isVerified,
-                      onDelete: () => _showDeleteDialog(context, vehicle),
-                      onEdit: () => _showEditDialog(context, vehicle),
-                    ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Colors.white, Colors.grey.withOpacity(0.02)],
                   ),
                 ),
+                child: Vehicletile(
+                  number: vehicle.vehicleNumber,
+                  type: vehicleTypeDisplay, // Updated to use provider method
+                  brand: vehicle.brand ?? 'Unknown',
+                  model: vehicle.name.isNotEmpty ? vehicle.name : 'Vehicle',
+                  image: vehicle.imageUrl,
+                  isVerified: vehicle.isVerified,
+                  onDelete: () => _showDeleteDialog(context, vehicle),
+                  onEdit: () => _showEditDialog(context, vehicle),
+                ),
               ),
-            )
-            ,
+            ),
+          );
+        }),
       ],
     );
+  }
+
+  String _parseMapString(String mapString) {
+    try {
+      // Remove curly braces and split by comma
+      final content = mapString.substring(1, mapString.length - 1);
+      final pairs = content.split(', ');
+
+      // Find the value pair
+      for (final pair in pairs) {
+        if (pair.trim().startsWith('value:')) {
+          return pair.split(':')[1].trim();
+        }
+      }
+      return 'Unknown';
+    } catch (e) {
+      return 'Unknown';
+    }
   }
 
   void _showAddVehicleDialog(BuildContext context) {
