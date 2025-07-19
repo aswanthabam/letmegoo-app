@@ -12,4 +12,5 @@ class AppImages {
   static const String camera_plus = 'assets/images/camera-plus.webp';
   static const String vehicle_not_found =
       'assets/images/vehicle_not_found.webp';
+  static const String home = 'assets/images/home.jpg';
 }

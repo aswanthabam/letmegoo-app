@@ -1,4 +1,3 @@
-// lib/main_app.dart
 import 'package:flutter/material.dart';
 import 'package:letmegoo/screens/create_report_page.dart';
 import 'package:letmegoo/screens/home_page.dart';
@@ -21,10 +20,13 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _onAddPressed() {
-    // Handle add button action - navigate to report/add screen
+    // Navigate to HomePage (which now shows reports)
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CreateReportPage()),
+      MaterialPageRoute(builder: (context) => HomePage(
+        onNavigate: _onNavigate, 
+        onAddPressed: _onAddPressed
+      )),
     );
   }
 
@@ -32,14 +34,15 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     switch (_currentIndex) {
       case 0:
-        return HomePage(onNavigate: _onNavigate, onAddPressed: _onAddPressed);
+        // CreateReportPage is now the home page
+        return CreateReportPage(onNavigate: _onNavigate, onAddPressed: _onAddPressed);
       case 1:
         return ProfilePage(
           onNavigate: _onNavigate,
           onAddPressed: _onAddPressed,
         );
       default:
-        return HomePage(onNavigate: _onNavigate, onAddPressed: _onAddPressed);
+        return CreateReportPage(onNavigate: _onNavigate, onAddPressed: _onAddPressed);
     }
   }
 }

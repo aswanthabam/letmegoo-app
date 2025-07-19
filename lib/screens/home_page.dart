@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/providers/report_providers.dart';
-import '../../widgets/custom_bottom_nav.dart';
 import '../widgets/buildreportsection.dart';
 import '../widgets/builddivider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
-  final Function(int) onNavigate;
-  final VoidCallback onAddPressed;
+  final Function(int)? onNavigate;
+  final VoidCallback? onAddPressed;
 
   const HomePage({
     super.key,
-    required this.onNavigate,
-    required this.onAddPressed,
+    this.onNavigate,
+    this.onAddPressed,
   });
 
   @override
@@ -65,6 +64,24 @@ class _HomePageState extends ConsumerState<HomePage>
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text(
+          'Reports',
+          style: AppFonts.semiBold20(),
+        ),
+        centerTitle: true,
+      ),
       body: MediaQuery.removePadding(
         context: context,
         removeBottom: true,
@@ -108,8 +125,7 @@ class _HomePageState extends ConsumerState<HomePage>
                                   ? _LoadingWidget(screenHeight: screenHeight)
                                   : reportsState.error != null
                                   ? _ErrorWidget(
-                                    screenHeight: screenHeight,
-                                    errorMessage: reportsState.error!,
+                                    screenHeight: screenHeight,errorMessage: reportsState.error!,
                                     onRetry:
                                         () =>
                                             ref
@@ -139,13 +155,6 @@ class _HomePageState extends ConsumerState<HomePage>
                     );
                   },
                 ),
-              ),
-
-              // Bottom Navigation
-              CustomBottomNav(
-                currentIndex: 0,
-                onTap: widget.onNavigate,
-                onInformPressed: widget.onAddPressed,
               ),
             ],
           ),

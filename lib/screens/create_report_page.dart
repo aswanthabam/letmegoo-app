@@ -11,8 +11,9 @@ import 'package:letmegoo/models/report_request.dart';
 import 'package:letmegoo/models/vehicle.dart';
 import 'package:letmegoo/screens/vehicle_found_page.dart';
 import 'package:letmegoo/widgets/main_app.dart';
+import '../../widgets/custom_bottom_nav.dart';
 
-// State Management with Riverpod
+// State Management with Riverpod - FIXED the syntax error here
 final reportStateProvider = StateNotifierProvider<
   ReportStateNotifier,
   AsyncValue<Map<String, dynamic>?>
@@ -75,9 +76,16 @@ class VehicleSearchNotifier extends StateNotifier<AsyncValue<Vehicle?>> {
 
 // UI Component
 class CreateReportPage extends ConsumerStatefulWidget {
-  final String? registrationNumber; // Add this parameter
+  final String? registrationNumber;
+  final Function(int)? onNavigate;
+  final VoidCallback? onAddPressed;
 
-  const CreateReportPage({super.key, this.registrationNumber});
+  const CreateReportPage({
+    super.key,
+    this.registrationNumber,
+    this.onNavigate,
+    this.onAddPressed,
+  });
 
   @override
   ConsumerState<CreateReportPage> createState() => _CreateReportPageState();
@@ -311,34 +319,6 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
           children: [
             Column(
               children: [
-                // Custom App Bar
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.04,
-                    vertical: screenHeight * 0.015,
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color: AppColors.textPrimary,
-                          size:
-                              screenWidth *
-                              (isLargeScreen
-                                  ? 0.025
-                                  : isTablet
-                                  ? 0.035
-                                  : 0.06),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
                 // Scrollable Content
                 Expanded(
                   child: SingleChildScrollView(
@@ -756,6 +736,14 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
                     onTap: _getButtonAction(),
                   ),
                 ),
+
+                // Bottom Navigation (only show if navigation callbacks are provided)
+                if (widget.onNavigate != null)
+                  CustomBottomNav(
+                    currentIndex: 0,
+                    onTap: widget.onNavigate!,
+                    onInformPressed: widget.onAddPressed ?? () {},
+                  ),
               ],
             ),
 

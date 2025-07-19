@@ -187,14 +187,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                         builder:
                                             (context) => PrivacyPreferencesPage(
                                               currentPreference:
-                                                  userState.userData!['privacy_preference']
+                                                  userState
+                                                      .userData!['privacy_preference']
                                                       ?.toString() ??
                                                   'private',
                                               onPreferenceChanged: (
                                                 newPreference,
                                               ) {
                                                 if (mounted) {
-                                                  ref.read(userProvider.notifier).updatePrivacyPreference(newPreference);
+                                                  ref
+                                                      .read(
+                                                        userProvider.notifier,
+                                                      )
+                                                      .updatePrivacyPreference(
+                                                        newPreference,
+                                                      );
                                                   _showSnackBar(
                                                     'Privacy preference updated successfully!',
                                                     isError: false,
@@ -264,25 +271,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                           child: Column(
                             children: [
-                              Profileoption(
-                                icon: Icons.help_outline,
-                                title: "Customer Support",
-                                trailing: Icon(
-                                  Icons.chevron_right,
-                                  color: AppColors.textSecondary,
-                                  size:
-                                      screenWidth *
-                                      (isLargeScreen
-                                          ? 0.025
-                                          : isTablet
-                                          ? 0.035
-                                          : 0.06),
-                                ),
-                                onTap: () {
-                                  // Handle customer support
-                                },
-                              ),
-
+                              // Profileoption(
+                              //   icon: Icons.help_outline,
+                              //   title: "Customer Support",
+                              //   trailing: Icon(
+                              //     Icons.chevron_right,
+                              //     color: AppColors.textSecondary,
+                              //     size:
+                              //         screenWidth *
+                              //         (isLargeScreen
+                              //             ? 0.025
+                              //             : isTablet
+                              //             ? 0.035
+                              //             : 0.06),
+                              //   ),
+                              //   onTap: () {
+                              //     // Handle customer support
+                              //   },
+                              // ),
                               CustomDivider(screenWidth: screenWidth),
 
                               Profileoption(
@@ -428,7 +434,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Widget _buildUserTile() {
     final userState = ref.watch(userProvider);
-    
+
     if (userState.isLoading) {
       return SizedBox(
         height: 80,
@@ -474,7 +480,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
             SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => ref.read(userProvider.notifier).refreshUserData(),
+              onPressed:
+                  () => ref.read(userProvider.notifier).refreshUserData(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
