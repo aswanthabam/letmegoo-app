@@ -136,12 +136,16 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     });
 
     try {
-      final result = await _locationService.getCurrentLocation();
-      
+      // Use medium accuracy to avoid GNSS callbacks
+      final result = await _locationService.getCurrentLocation(
+        accuracy: LocationAccuracy.medium, // Explicitly set to medium
+        timeLimit: const Duration(seconds: 15),
+      );
+
       if (result.isSuccess) {
         return result.position;
       } else {
-        // Handle different error types
+        // Handle different error types including system errors
         switch (result.errorType) {
           case LocationErrorType.serviceDisabled:
             LocationService.showLocationServiceDialog(context);
@@ -154,6 +158,12 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             break;
           case LocationErrorType.permissionPermanentlyDenied:
             LocationService.showPermissionPermanentlyDeniedDialog(context);
+            break;
+          case LocationErrorType.systemError:
+            LocationService.showSystemErrorDialog(
+              context,
+              message: result.errorMessage,
+            );
             break;
           case LocationErrorType.locationError:
             LocationService.showLocationErrorDialog(
@@ -180,7 +190,10 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     double latitude,
     double longitude,
   ) async {
-    return await _locationService.getAddressFromCoordinates(latitude, longitude);
+    return await _locationService.getAddressFromCoordinates(
+      latitude,
+      longitude,
+    );
   }
 
   void _showFullScreenDialog(
@@ -823,7 +836,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             ),
 
             // Loading overlay
-            if (reportState.isLoading || vehicleSearchState.isLoading || _isLocationLoading)
+            if (reportState.isLoading ||
+                vehicleSearchState.isLoading ||
+                _isLocationLoading)
               Container(
                 color: Colors.black.withOpacity(0.3),
                 child: Center(
@@ -865,7 +880,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     final reportState = ref.watch(reportStateProvider);
     final vehicleSearchState = ref.watch(vehicleSearchProvider);
 
-    if (reportState.isLoading || vehicleSearchState.isLoading || _isLocationLoading) {
+    if (reportState.isLoading ||
+        vehicleSearchState.isLoading ||
+        _isLocationLoading) {
       return () {};
     }
 
