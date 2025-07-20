@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:letmegoo/constants/app_theme.dart';
 import 'package:letmegoo/screens/my_vehicles_page.dart';
+import 'package:letmegoo/screens/privacy_policy_page.dart';
 import 'package:letmegoo/screens/privacy_preferences_page.dart';
 import 'package:letmegoo/providers/user_provider.dart';
 import 'package:letmegoo/providers/app_providers.dart';
 import 'package:letmegoo/providers/app_state_provider.dart';
+import 'package:letmegoo/screens/terms_and_condition_page.dart';
 import 'package:letmegoo/services/auth_service.dart';
 import '../../widgets/profileoption.dart';
 import '../../widgets/usertile.dart';
@@ -271,26 +273,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                           child: Column(
                             children: [
-                              // Profileoption(
-                              //   icon: Icons.help_outline,
-                              //   title: "Customer Support",
-                              //   trailing: Icon(
-                              //     Icons.chevron_right,
-                              //     color: AppColors.textSecondary,
-                              //     size:
-                              //         screenWidth *
-                              //         (isLargeScreen
-                              //             ? 0.025
-                              //             : isTablet
-                              //             ? 0.035
-                              //             : 0.06),
-                              //   ),
-                              //   onTap: () {
-                              //     // Handle customer support
-                              //   },
-                              // ),
-                              CustomDivider(screenWidth: screenWidth),
-
                               Profileoption(
                                 icon: Icons.shield_outlined,
                                 title: "Privacy Policy",
@@ -306,7 +288,67 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                           : 0.06),
                                 ),
                                 onTap: () {
-                                  // Handle privacy policy
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const PrivacyPolicyPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              CustomDivider(screenWidth: screenWidth),
+
+                              Profileoption(
+                                icon: Icons.article_outlined,
+                                title: "Terms and Conditions",
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textSecondary,
+                                  size:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.025
+                                          : isTablet
+                                          ? 0.035
+                                          : 0.06),
+                                ),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const TermsAndConditionsPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              CustomDivider(screenWidth: screenWidth),
+
+                              Profileoption(
+                                icon: Icons.info_outline,
+                                title: "About Us",
+                                trailing: Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textSecondary,
+                                  size:
+                                      screenWidth *
+                                      (isLargeScreen
+                                          ? 0.025
+                                          : isTablet
+                                          ? 0.035
+                                          : 0.06),
+                                ),
+                                onTap: () {
+                                  // Handle about us - you can create an AboutUsPage similar to PrivacyPolicyPage
+                                  _showSnackBar(
+                                    'About Us page coming soon!',
+                                    isError: false,
+                                  );
                                 },
                               ),
                             ],
@@ -707,19 +749,85 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ],
           ),
-          content: Text(
-            'Are you sure you want to delete your account? This action cannot be undone.',
-            textAlign: TextAlign.center,
-            style: AppFonts.regular16().copyWith(
-              fontSize:
-                  screenWidth *
-                  (isLargeScreen
-                      ? 0.016
-                      : isTablet
-                      ? 0.025
-                      : 0.04),
-              color: AppColors.textSecondary,
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Are you sure you want to delete your account?',
+                textAlign: TextAlign.center,
+                style: AppFonts.regular16().copyWith(
+                  fontSize:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.016
+                          : isTablet
+                          ? 0.025
+                          : 0.04),
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: screenWidth * 0.03),
+              Text(
+                'This action cannot be undone. All your data including:',
+                textAlign: TextAlign.center,
+                style: AppFonts.regular14().copyWith(
+                  fontSize:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.014
+                          : isTablet
+                          ? 0.022
+                          : 0.035),
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              SizedBox(height: screenWidth * 0.02),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWarningItem(
+                    '• Profile information',
+                    screenWidth,
+                    isTablet,
+                    isLargeScreen,
+                  ),
+                  _buildWarningItem(
+                    '• Vehicle registrations',
+                    screenWidth,
+                    isTablet,
+                    isLargeScreen,
+                  ),
+                  _buildWarningItem(
+                    '• Message history',
+                    screenWidth,
+                    isTablet,
+                    isLargeScreen,
+                  ),
+                  _buildWarningItem(
+                    '• Account preferences',
+                    screenWidth,
+                    isTablet,
+                    isLargeScreen,
+                  ),
+                ],
+              ),
+              SizedBox(height: screenWidth * 0.03),
+              Text(
+                'will be permanently deleted.',
+                textAlign: TextAlign.center,
+                style: AppFonts.regular14().copyWith(
+                  fontSize:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.014
+                          : isTablet
+                          ? 0.022
+                          : 0.035),
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
           actions: [
             Row(
@@ -759,10 +867,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   child: TextButton(
                     onPressed: () {
                       Navigator.of(ctx).pop();
-                      _showSnackBar(
-                        'Account deletion requested',
-                        isError: false,
-                      );
+                      _handleDeleteAccount(context);
                     },
                     style: TextButton.styleFrom(
                       backgroundColor: AppColors.darkRed,
@@ -774,7 +879,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                     ),
                     child: Text(
-                      'Delete',
+                      'Delete Forever',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize:
@@ -795,5 +900,152 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         );
       },
     );
+  }
+
+  Widget _buildWarningItem(
+    String text,
+    double screenWidth,
+    bool isTablet,
+    bool isLargeScreen,
+  ) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 2),
+      child: Text(
+        text,
+        style: AppFonts.regular14().copyWith(
+          fontSize:
+              screenWidth *
+              (isLargeScreen
+                  ? 0.013
+                  : isTablet
+                  ? 0.02
+                  : 0.032),
+          color: AppColors.darkRed.withOpacity(0.8),
+        ),
+      ),
+    );
+  }
+
+  void _handleDeleteAccount(BuildContext context) async {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+    final isLargeScreen = screenWidth > 900;
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.white,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: screenWidth * 0.08,
+                height: screenWidth * 0.08,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.darkRed),
+                ),
+              ),
+              SizedBox(height: screenWidth * 0.04),
+              Text(
+                'Deleting Account...',
+                style: AppFonts.regular16().copyWith(
+                  fontSize:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.016
+                          : isTablet
+                          ? 0.025
+                          : 0.04),
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              SizedBox(height: screenWidth * 0.02),
+              Text(
+                'Please wait while we process your request',
+                textAlign: TextAlign.center,
+                style: AppFonts.regular14().copyWith(
+                  fontSize:
+                      screenWidth *
+                      (isLargeScreen
+                          ? 0.014
+                          : isTablet
+                          ? 0.022
+                          : 0.035),
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      // Call the delete account API
+      final success = await AuthService.deleteUserAccount();
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      if (success) {
+        // Clear app state
+        ref.read(appStateProvider.notifier).logout(ref);
+
+        if (mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Account deleted successfully'),
+              backgroundColor: AppColors.darkGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+
+          // Navigate to login page and clear all routes
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/login', // Replace with your login route
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          _showSnackBar(
+            'Failed to delete account. Please try again.',
+            isError: true,
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      String errorMessage = 'Failed to delete account';
+      if (e is ConnectivityException) {
+        errorMessage =
+            'No internet connection. Please check your network and try again.';
+      } else if (e is AuthException) {
+        errorMessage = 'Authentication error. Please login again.';
+      } else if (e is ApiException) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+
+      if (mounted) {
+        _showSnackBar(errorMessage, isError: true);
+      }
+    }
   }
 }

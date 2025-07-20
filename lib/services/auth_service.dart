@@ -186,7 +186,44 @@ class AuthService {
       throw ApiException('Update failed: $e');
     }
   }
+static Future<bool> deleteUserAccount() async {
+  try {
+    if (!await _hasInternetConnection()) {
+      throw ConnectivityException('No internet connection');
+    }
 
+    final headers = await _getAuthHeaders();
+
+    final response = await _httpClient
+        .delete(
+          Uri.parse('$baseUrl/user/delete'),
+          headers: headers,
+        )
+        .timeout(timeoutDuration);
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      // Account deleted successfully
+      // Sign out from Firebase as well
+      await FirebaseAuth.instance.signOut();
+      await GoogleAuthService.signOut();
+      return true;
+    } else {
+      _handleHttpError(response);
+      return false;
+    }
+  } on TimeoutException {
+    throw ConnectivityException('Request timeout');
+  } on SocketException {
+    throw ConnectivityException('Network error');
+  } catch (e) {
+    if (e is AuthException ||
+        e is ApiException ||
+        e is ConnectivityException) {
+      rethrow;
+    }
+    throw ApiException('Account deletion failed: $e');
+  }
+}
   /// Updates user privacy preference
   static Future<Map<String, dynamic>?> updatePrivacyPreference(
     String privacyPreference,

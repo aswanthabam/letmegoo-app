@@ -439,7 +439,7 @@ class _VehicleFoundPageState extends State<VehicleFoundPage> {
     // Clean the phone number (remove spaces, dashes, etc.)
     final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
 
-    final Uri launchUri = Uri(scheme: 'tel', path: cleanNumber);
+    final Uri launchUri = Uri(scheme: 'tel', path: "+$cleanNumber");
 
     print('Attempting to call: $cleanNumber'); // Debug log
     print('Launch URI: $launchUri'); // Debug log
