@@ -132,7 +132,7 @@ class _TermsAndConditionsPageState
                               ),
                               SizedBox(height: 4),
                               Text(
-                                "Effective Date: 01.08.2025",
+                                "Effective Date: 20.07.2025",
                                 style: AppFonts.regular14().copyWith(
                                   fontSize:
                                       screenWidth *
@@ -145,7 +145,7 @@ class _TermsAndConditionsPageState
                                 ),
                               ),
                               Text(
-                                "Last Updated: 01.08.2025 | Version: 1.0",
+                                "Last Updated: 20.07.2025 | Version: 1.0",
                                 style: AppFonts.regular14().copyWith(
                                   fontSize:
                                       screenWidth *

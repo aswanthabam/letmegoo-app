@@ -130,7 +130,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                "Effective Date: 01.08.2025",
+                                "Effective Date:20.07.2025",
                                 style: AppFonts.regular14().copyWith(
                                   fontSize:
                                       screenWidth *
@@ -143,7 +143,7 @@ class _PrivacyPolicyPageState extends ConsumerState<PrivacyPolicyPage> {
                                 ),
                               ),
                               Text(
-                                "Last Updated: 01.08.2025",
+                                "Last Updated: 20.07.2025",
                                 style: AppFonts.regular14().copyWith(
                                   fontSize:
                                       screenWidth *
