@@ -6,7 +6,7 @@ part of 'report_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$liveReportsByUserHash() => r'8f22b8fd7b4d0a2b131df8ea22da7adc6a72bc28';
+String _$liveReportsByUserHash() => r'00f16a217ec3580540727feb4e9ebea120bb98fe';
 
 /// See also [liveReportsByUser].
 @ProviderFor(liveReportsByUser)
@@ -26,7 +26,7 @@ final liveReportsByUserProvider =
 // ignore: unused_element
 typedef LiveReportsByUserRef = AutoDisposeFutureProviderRef<List<Report>>;
 String _$liveReportsAgainstUserHash() =>
-    r'21450d7a5ca1fed1aed7617961456381da68053e';
+    r'72e3977feb22c1ae999a4a6759090658fa1ffc66';
 
 /// See also [liveReportsAgainstUser].
 @ProviderFor(liveReportsAgainstUser)
@@ -46,7 +46,7 @@ final liveReportsAgainstUserProvider =
 // ignore: unused_element
 typedef LiveReportsAgainstUserRef = AutoDisposeFutureProviderRef<List<Report>>;
 String _$solvedReportsByUserHash() =>
-    r'6f3466f141c4e7614901e0d430e02398607cd52d';
+    r'dda4afba3403240c0cb4b5139702f5e6a7cd0b7a';
 
 /// See also [solvedReportsByUser].
 @ProviderFor(solvedReportsByUser)
@@ -66,7 +66,7 @@ final solvedReportsByUserProvider =
 // ignore: unused_element
 typedef SolvedReportsByUserRef = AutoDisposeFutureProviderRef<List<Report>>;
 String _$solvedReportsAgainstUserHash() =>
-    r'05cb06b04c86e04afef9d909b202a5ca9669909f';
+    r'396bd607be972d54c6491fa253fd806ccc02d581';
 
 /// See also [solvedReportsAgainstUser].
 @ProviderFor(solvedReportsAgainstUser)
@@ -87,7 +87,7 @@ final solvedReportsAgainstUserProvider =
 typedef SolvedReportsAgainstUserRef =
     AutoDisposeFutureProviderRef<List<Report>>;
 String _$liveReportsByUserFormattedHash() =>
-    r'0eaa2f1fd9b7494ff114527ff1a8ea13abb8cd18';
+    r'5ad47ff2291fb91d88c3e06e00a4b6cbd54e9a6c';
 
 /// See also [liveReportsByUserFormatted].
 @ProviderFor(liveReportsByUserFormatted)
@@ -108,7 +108,7 @@ final liveReportsByUserFormattedProvider =
 typedef LiveReportsByUserFormattedRef =
     AutoDisposeProviderRef<List<Map<String, dynamic>>>;
 String _$liveReportsAgainstUserFormattedHash() =>
-    r'13d1a006477afc0251dbe83f3f37d01c2e0af7c4';
+    r'6f5eaf4e13e9caf1fe7ef226128241878f6ad79e';
 
 /// See also [liveReportsAgainstUserFormatted].
 @ProviderFor(liveReportsAgainstUserFormatted)
@@ -129,7 +129,7 @@ final liveReportsAgainstUserFormattedProvider =
 typedef LiveReportsAgainstUserFormattedRef =
     AutoDisposeProviderRef<List<Map<String, dynamic>>>;
 String _$solvedReportsByUserFormattedHash() =>
-    r'af560d5ba3644bf3779e9bb6e3568a2649324a8f';
+    r'9c5d407cd1453381842ecbb980ab0c648db8de20';
 
 /// See also [solvedReportsByUserFormatted].
 @ProviderFor(solvedReportsByUserFormatted)
@@ -150,7 +150,7 @@ final solvedReportsByUserFormattedProvider =
 typedef SolvedReportsByUserFormattedRef =
     AutoDisposeProviderRef<List<Map<String, dynamic>>>;
 String _$solvedReportsAgainstUserFormattedHash() =>
-    r'ff6971e10642fb80594b4802289bb814302bb33c';
+    r'd30234f6db2d5817ca53214941dafd12adce8de9';
 
 /// See also [solvedReportsAgainstUserFormatted].
 @ProviderFor(solvedReportsAgainstUserFormatted)
@@ -170,7 +170,59 @@ final solvedReportsAgainstUserFormattedProvider =
 // ignore: unused_element
 typedef SolvedReportsAgainstUserFormattedRef =
     AutoDisposeProviderRef<List<Map<String, dynamic>>>;
-String _$reportsHash() => r'565421690cdbd328e4620b592c936d5dd9c5f0c9';
+String _$totalReportsCountHash() => r'c0a1fcd8fa1a6c18acb844504388098a43bd219b';
+
+/// See also [totalReportsCount].
+@ProviderFor(totalReportsCount)
+final totalReportsCountProvider = AutoDisposeProvider<int>.internal(
+  totalReportsCount,
+  name: r'totalReportsCountProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$totalReportsCountHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef TotalReportsCountRef = AutoDisposeProviderRef<int>;
+String _$hasAnyReportsHash() => r'4c6c4ced0276064c4d7980e792de902b69b11574';
+
+/// See also [hasAnyReports].
+@ProviderFor(hasAnyReports)
+final hasAnyReportsProvider = AutoDisposeProvider<bool>.internal(
+  hasAnyReports,
+  name: r'hasAnyReportsProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$hasAnyReportsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef HasAnyReportsRef = AutoDisposeProviderRef<bool>;
+String _$allReportsHash() => r'3bc8550c9a03c84cae7154afa03f215529cdd96b';
+
+/// See also [allReports].
+@ProviderFor(allReports)
+final allReportsProvider = AutoDisposeProvider<List<Report>>.internal(
+  allReports,
+  name: r'allReportsProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$allReportsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AllReportsRef = AutoDisposeProviderRef<List<Report>>;
+String _$reportsHash() => r'1e01ceba388758b675e23992bf4e08409546684d';
 
 /// See also [Reports].
 @ProviderFor(Reports)
@@ -185,7 +237,7 @@ final reportsProvider =
     );
 
 typedef _$Reports = AutoDisposeNotifier<ReportsState>;
-String _$reportsCacheHash() => r'9df8d1d852c36c3cb67a814f0567d7de7e709d16';
+String _$reportsCacheHash() => r'1b73051dcb506ba31f1953aa2dfbf2943aa7a08b';
 
 /// See also [ReportsCache].
 @ProviderFor(ReportsCache)

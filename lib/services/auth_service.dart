@@ -186,44 +186,43 @@ class AuthService {
       throw ApiException('Update failed: $e');
     }
   }
-static Future<bool> deleteUserAccount() async {
-  try {
-    if (!await _hasInternetConnection()) {
-      throw ConnectivityException('No internet connection');
-    }
 
-    final headers = await _getAuthHeaders();
+  static Future<bool> deleteUserAccount() async {
+    try {
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
 
-    final response = await _httpClient
-        .delete(
-          Uri.parse('$baseUrl/user/delete'),
-          headers: headers,
-        )
-        .timeout(timeoutDuration);
+      final headers = await _getAuthHeaders();
 
-    if (response.statusCode == 200 || response.statusCode == 204) {
-      // Account deleted successfully
-      // Sign out from Firebase as well
-      await FirebaseAuth.instance.signOut();
-      await GoogleAuthService.signOut();
-      return true;
-    } else {
-      _handleHttpError(response);
-      return false;
+      final response = await _httpClient
+          .delete(Uri.parse('$baseUrl/user/delete'), headers: headers)
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // Account deleted successfully
+        // Sign out from Firebase as well
+        await FirebaseAuth.instance.signOut();
+        await GoogleAuthService.signOut();
+        return true;
+      } else {
+        _handleHttpError(response);
+        return false;
+      }
+    } on TimeoutException {
+      throw ConnectivityException('Request timeout');
+    } on SocketException {
+      throw ConnectivityException('Network error');
+    } catch (e) {
+      if (e is AuthException ||
+          e is ApiException ||
+          e is ConnectivityException) {
+        rethrow;
+      }
+      throw ApiException('Account deletion failed: $e');
     }
-  } on TimeoutException {
-    throw ConnectivityException('Request timeout');
-  } on SocketException {
-    throw ConnectivityException('Network error');
-  } catch (e) {
-    if (e is AuthException ||
-        e is ApiException ||
-        e is ConnectivityException) {
-      rethrow;
-    }
-    throw ApiException('Account deletion failed: $e');
   }
-}
+
   /// Updates user privacy preference
   static Future<Map<String, dynamic>?> updatePrivacyPreference(
     String privacyPreference,
@@ -926,29 +925,44 @@ static Future<bool> deleteUserAccount() async {
 
   /// Get live reports by user
   static Future<List<Report>> getLiveReportsByUser() async {
-    return _getReports(isClosed: false, type: 'reported_by_me');
+    print('🔴 Getting live reports BY user');
+    final reports = await _getReports(isClosed: false, type: 'reported_by_me');
+    print('🔴 Live reports BY user: ${reports.length}');
+    return reports;
   }
 
   /// Get live reports against user
   static Future<List<Report>> getLiveReportsAgainstUser() async {
-    return _getReports(isClosed: false, type: 'reported_to_me');
+    print('🟠 Getting live reports AGAINST user');
+    final reports = await _getReports(isClosed: false, type: 'reported_to_me');
+    print('🟠 Live reports AGAINST user: ${reports.length}');
+    return reports;
   }
 
   /// Get solved reports by user
   static Future<List<Report>> getSolvedReportsByUser() async {
-    return _getReports(isClosed: true, type: 'reported_by_me');
+    print('🟢 Getting solved reports BY user');
+    final reports = await _getReports(isClosed: true, type: 'reported_by_me');
+    print('🟢 Solved reports BY user: ${reports.length}');
+    return reports;
   }
 
   /// Get solved reports against user
   static Future<List<Report>> getSolvedReportsAgainstUser() async {
-    return _getReports(isClosed: true, type: 'reported_to_me');
+    print('🟡 Getting solved reports AGAINST user');
+    final reports = await _getReports(isClosed: true, type: 'reported_to_me');
+    print('🟡 Solved reports AGAINST user: ${reports.length}');
+    return reports;
   }
 
+  /// Generic method to fetch reports
   /// Generic method to fetch reports
   static Future<List<Report>> _getReports({
     required bool isClosed,
     required String type,
   }) async {
+    print('🔍 Getting reports: isClosed=$isClosed, type=$type');
+
     try {
       if (!await _hasInternetConnection()) {
         throw ConnectivityException('No internet connection');
@@ -960,61 +974,100 @@ static Future<bool> deleteUserAccount() async {
         queryParameters: {'is_closed': isClosed.toString(), 'type': type},
       );
 
+      print('📡 Request URL: $uri');
+
       final response = await _httpClient
           .get(uri, headers: headers)
           .timeout(timeoutDuration);
 
+      print('📥 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final dynamic responseData = json.decode(response.body);
+        print('📄 Response data type: ${responseData.runtimeType}');
 
         List<Report> reports = [];
+        int successCount = 0;
+        int errorCount = 0;
 
         if (responseData is List) {
+          print('📝 Processing ${responseData.length} items from direct list');
           // Direct list of reports
           for (var item in responseData) {
             if (item is Map<String, dynamic>) {
-              print("datasss");
-              print(item);
+              print("📋 Processing report: ${item['id']}");
               try {
-                reports.add(Report.fromJson(item));
+                final report = Report.fromJson(item);
+                reports.add(report);
+                successCount++;
               } catch (e) {
-                print('Error parsing report: $e');
+                print('❌ Error parsing report ${item['id']}: $e');
+                errorCount++;
               }
             }
           }
         } else if (responseData is Map<String, dynamic>) {
+          print('📦 Processing object containing reports');
           // Object containing reports array
           final possibleKeys = ['reports', 'data', 'results', 'items'];
 
+          bool foundReports = false;
           for (String key in possibleKeys) {
             if (responseData.containsKey(key) && responseData[key] is List) {
+              print('📝 Found reports in key: $key');
               final List<dynamic> reportsList = responseData[key];
+              foundReports = true;
+
               for (var item in reportsList) {
-                print("datasss testtt");
-                print(item);
                 if (item is Map<String, dynamic>) {
+                  print("📋 Processing report: ${item['id']}");
                   try {
-                    reports.add(Report.fromJson(item));
+                    final report = Report.fromJson(item);
+                    reports.add(report);
+                    successCount++;
                   } catch (e) {
-                    print('Error parsing report: $e');
+                    print('❌ Error parsing report ${item['id']}: $e');
+                    errorCount++;
                   }
                 }
               }
               break;
             }
           }
+
+          // If no array found in common keys, check if the response itself is a single report
+          if (!foundReports && responseData.containsKey('id')) {
+            print('📋 Processing single report');
+            try {
+              final report = Report.fromJson(responseData);
+              reports.add(report);
+              successCount++;
+            } catch (e) {
+              print('❌ Error parsing single report: $e');
+              errorCount++;
+            }
+          }
         }
+
+        print(
+          '✅ Successfully parsed $successCount reports, $errorCount errors',
+        );
+        print('📊 Final reports: ${reports.map((r) => r.id).toList()}');
 
         return reports;
       } else {
+        print('❌ API Error: ${response.statusCode} - ${response.body}');
         _handleHttpError(response);
         return [];
       }
     } on TimeoutException {
+      print('⏰ Request timeout');
       throw ConnectivityException('Request timeout');
     } on SocketException {
+      print('🌐 Network error');
       throw ConnectivityException('Network error');
     } catch (e) {
+      print('💥 Unexpected error: $e');
       if (e is AuthException ||
           e is ApiException ||
           e is ConnectivityException) {
@@ -1041,6 +1094,62 @@ static Future<bool> deleteUserAccount() async {
       };
     } catch (e) {
       throw ApiException('Failed to fetch all reports: $e');
+    }
+  }
+
+  /// Debug method to test all reports without filtering
+  static Future<List<Report>> getAllReportsDebug() async {
+    print('🔍 DEBUG: Getting ALL reports without filters');
+
+    try {
+      if (!await _hasInternetConnection()) {
+        throw ConnectivityException('No internet connection');
+      }
+
+      final headers = await _getAuthHeaders();
+
+      // Try without query parameters first
+      final uri = Uri.parse('$baseUrl/vehicle/report/list');
+
+      print('📡 DEBUG Request URL: $uri');
+
+      final response = await _httpClient
+          .get(uri, headers: headers)
+          .timeout(timeoutDuration);
+
+      print('📥 DEBUG Response status: ${response.statusCode}');
+      print('📄 DEBUG Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+
+        List<Report> reports = [];
+
+        if (responseData is List) {
+          for (var item in responseData) {
+            if (item is Map<String, dynamic>) {
+              try {
+                final report = Report.fromJson(item);
+                reports.add(report);
+                print(
+                  '📋 DEBUG Report: ${report.id} - Status: ${report.currentStatus} - Closed: ${report.isClosed}',
+                );
+              } catch (e) {
+                print('❌ DEBUG Error parsing report: $e');
+              }
+            }
+          }
+        }
+
+        print('✅ DEBUG Total reports: ${reports.length}');
+        return reports;
+      } else {
+        _handleHttpError(response);
+        return [];
+      }
+    } catch (e) {
+      print('💥 DEBUG Error: $e');
+      rethrow;
     }
   }
 

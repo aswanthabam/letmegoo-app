@@ -51,6 +51,8 @@ Widget buildReportSection({
               message: report['message'],
               reporter: report['reporter'],
               profileImage: report['profileImage'],
+              latitude: report['latitude'],
+              longitude: report['longitude'],
             ),
           ),
         ),

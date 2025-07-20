@@ -71,6 +71,8 @@ class Vehicle {
   final String? brand;
   final VehicleImage? image;
   final bool isVerified;
+  final DateTime createdAt; // Added for sorting
+  final DateTime? updatedAt; // Added for tracking updates
 
   Vehicle({
     required this.id,
@@ -82,7 +84,9 @@ class Vehicle {
     this.brand,
     this.image,
     required this.isVerified,
-  });
+    DateTime? createdAt,
+    this.updatedAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
     try {
@@ -103,6 +107,12 @@ class Vehicle {
                 : null,
         isVerified:
             json['is_verified'] == true || json['is_verified'] == 'true',
+        createdAt:
+            DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+        updatedAt:
+            json['updated_at'] != null
+                ? DateTime.tryParse(json['updated_at'])
+                : null,
       );
     } catch (e) {
       print('Error parsing Vehicle from JSON: $e');
@@ -115,4 +125,62 @@ class Vehicle {
   String get displayName => name.isNotEmpty ? name : vehicleNumber;
   String get ownerName => owner.fullname;
   String? get imageUrl => image?.bestImage;
+
+  // Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'vehicle_number': vehicleNumber,
+      'fuel_type': fuelType,
+      'vehicle_type': vehicleType,
+      'brand': brand,
+      'is_verified': isVerified,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+
+  // Copy with method for updates
+  Vehicle copyWith({
+    String? id,
+    String? name,
+    String? vehicleNumber,
+    VehicleOwner? owner,
+    String? fuelType,
+    String? vehicleType,
+    String? brand,
+    VehicleImage? image,
+    bool? isVerified,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Vehicle(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      vehicleNumber: vehicleNumber ?? this.vehicleNumber,
+      owner: owner ?? this.owner,
+      fuelType: fuelType ?? this.fuelType,
+      vehicleType: vehicleType ?? this.vehicleType,
+      brand: brand ?? this.brand,
+      image: image ?? this.image,
+      isVerified: isVerified ?? this.isVerified,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'Vehicle(id: $id, name: $name, vehicleNumber: $vehicleNumber, vehicleType: $vehicleType, isVerified: $isVerified)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Vehicle && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

@@ -1,55 +1,98 @@
 class Report {
   final String id;
-  final String timeDate;
-  final String status;
-  final String location;
-  final String message;
-  final String reporter;
-  final String? profileImage;
+  final int reportNumber;
+  final ReportedVehicle vehicle;
+  final String notes;
+  final String currentStatus;
   final bool isClosed;
-  final String type;
-  final String? vehicleNumber;
+  final bool isAnonymous;
+  final Reporter reporter;
   final DateTime createdAt;
-  final DateTime? updatedAt;
+  final DateTime updatedAt;
+  final String? latitude;
+  final String? longitude;
+  final String? location;
+  final List<ReportImage> images;
+  final List<StatusLog> statusLogs;
 
   Report({
     required this.id,
-    required this.timeDate,
-    required this.status,
-    required this.location,
-    required this.message,
-    required this.reporter,
-    this.profileImage,
+    required this.reportNumber,
+    required this.vehicle,
+    required this.notes,
+    required this.currentStatus,
     required this.isClosed,
-    required this.type,
-    this.vehicleNumber,
+    required this.isAnonymous,
+    required this.reporter,
     required this.createdAt,
-    this.updatedAt,
+    required this.updatedAt,
+    this.latitude,
+    this.longitude,
+    this.location,
+    required this.images,
+    required this.statusLogs,
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
-    return Report(
-      id: json['id']?.toString() ?? '',
-      timeDate: _formatDateTime(json['created_at']),
-      status: json['is_closed'] == true ? 'Solved' : 'Active',
-      location: json['location'] ?? 'Unknown Location',
-      message:
-          json['notes'] == ""
-              ? 'Your vehicle has been reported.'
-              : json['notes'],
-      reporter: _getReporterText(json['reporter']),
-      profileImage: json['profile_image'] ?? json['reporter_profile_image'],
-      isClosed: json['is_closed'] ?? false,
-      type: json['type'] ?? '',
-      vehicleNumber:
-          json['vehicle_number'] ?? json['reported_vehicle']?['vehicle_number'],
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
-      updatedAt:
-          json['updated_at'] != null
-              ? DateTime.tryParse(json['updated_at'])
-              : null,
-    );
+    try {
+      print('📝 Parsing report: ${json['id']}');
+
+      // Handle current_status which can be either String or Map
+      String currentStatus;
+      if (json['current_status'] is Map<String, dynamic>) {
+        final statusMap = json['current_status'] as Map<String, dynamic>;
+        currentStatus = statusMap['key']?.toString() ?? 'unknown';
+        print('  - Status from map: $currentStatus');
+      } else {
+        currentStatus = json['current_status']?.toString() ?? 'unknown';
+        print('  - Status from string: $currentStatus');
+      }
+
+      final report = Report(
+        id: json['id']?.toString() ?? '',
+        reportNumber: json['report_number'] ?? 0,
+        vehicle: ReportedVehicle.fromJson(json['vehicle'] ?? {}),
+        notes: json['notes']?.toString() ?? '',
+        currentStatus: currentStatus,
+        isClosed: json['is_closed'] ?? false,
+        isAnonymous: json['is_anonymous'] ?? false,
+        reporter: Reporter.fromJson(json['reporter'] ?? {}),
+        createdAt:
+            DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+        updatedAt:
+            DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+        latitude: json['latitude']?.toString(),
+        longitude: json['longitude']?.toString(),
+        location: json['location']?.toString(),
+        images:
+            (json['images'] as List<dynamic>?)
+                ?.map((img) => ReportImage.fromJson(img))
+                .toList() ??
+            [],
+        statusLogs:
+            (json['status_logs'] as List<dynamic>?)
+                ?.map((log) => StatusLog.fromJson(log))
+                .toList() ??
+            [],
+      );
+
+      print('✅ Successfully parsed report: ${report.id}');
+      return report;
+    } catch (e) {
+      print('❌ Error parsing report: $e');
+      print('📄 JSON data: $json');
+      rethrow;
+    }
   }
+
+  // Helper methods for widget compatibility
+  String get formattedTimeDate => _formatDateTime(createdAt.toIso8601String());
+  String get displayStatus => isClosed ? 'Solved' : 'Active';
+  String get displayLocation => location ?? 'Unknown Location';
+  String get displayMessage =>
+      notes.isEmpty ? 'Your vehicle has been reported.' : notes;
+  String get displayReporter => reporter.displayName;
+  String? get profileImage => reporter.profilePicture;
 
   static String _formatDateTime(String? dateTimeStr) {
     if (dateTimeStr == null) return 'Unknown Time';
@@ -66,23 +109,6 @@ class Report {
     } catch (e) {
       return 'Unknown Time';
     }
-  }
-
-  static String _getReporterText(Map<String, dynamic> json) {
-    final type = json['type'] ?? '';
-    final reporterName = json['fullname'];
-
-    if (type == 'reported_by_me') {
-      return 'Reported By you';
-    } else if (type == 'reported_to_me') {
-      if (reporterName != null && reporterName.isNotEmpty) {
-        return 'Reported By $reporterName';
-      } else {
-        return 'Reported By someone anonymous';
-      }
-    }
-
-    return reporterName;
   }
 
   static String _getMonthName(int month) {
@@ -119,13 +145,242 @@ class Report {
 
   // Convert to the format your existing widgets expect
   Map<String, dynamic> toWidgetFormat() {
-    return {
-      'timeDate': timeDate,
-      'status': status,
-      'location': location,
-      'message': message,
-      'reporter': reporter,
-      'profileImage': profileImage,
-    };
+    try {
+      final widgetData = {
+        'timeDate': formattedTimeDate,
+        'status': displayStatus,
+        'location': displayLocation,
+        'message': displayMessage,
+        'reporter': displayReporter,
+        'profileImage': profileImage,
+        'latitude': latitude,
+        'longitude': longitude,
+      };
+      print('🎨 Widget format for ${id}: $widgetData');
+      return widgetData;
+    } catch (e) {
+      print('❌ Error formatting widget data for ${id}: $e');
+      return {
+        'timeDate': 'Unknown Time',
+        'status': 'Unknown',
+        'location': 'Unknown Location',
+        'message': 'Error loading report',
+        'reporter': 'Unknown',
+        'profileImage': null,
+        'latitude': null,
+        'longitude': null,
+      };
+    }
+  }
+
+  @override
+  String toString() {
+    return 'Report(id: $id, reportNumber: $reportNumber, currentStatus: $currentStatus, isClosed: $isClosed, notes: $notes)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Report && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
+}
+
+// ReportedVehicle class (renamed from Vehicle to avoid conflicts)
+class ReportedVehicle {
+  final String id;
+  final String vehicleNumber;
+  final String vehicleType;
+  final String? brand;
+  final Map<String, dynamic>? image;
+  final Owner? owner;
+
+  ReportedVehicle({
+    required this.id,
+    required this.vehicleNumber,
+    required this.vehicleType,
+    this.brand,
+    this.image,
+    this.owner,
+  });
+
+  factory ReportedVehicle.fromJson(Map<String, dynamic> json) {
+    try {
+      return ReportedVehicle(
+        id: json['id']?.toString() ?? '',
+        vehicleNumber: json['vehicle_number']?.toString() ?? '',
+        vehicleType: json['vehicle_type']?.toString() ?? '',
+        brand: json['brand']?.toString(),
+        image: json['image'] as Map<String, dynamic>?,
+        owner: json['owner'] != null ? Owner.fromJson(json['owner']) : null,
+      );
+    } catch (e) {
+      print('❌ Error parsing ReportedVehicle: $e');
+      print('📄 Vehicle JSON: $json');
+      rethrow;
+    }
+  }
+
+  @override
+  String toString() {
+    return 'ReportedVehicle(id: $id, vehicleNumber: $vehicleNumber, vehicleType: $vehicleType)';
+  }
+}
+
+class Owner {
+  final String id;
+  final String? privacyPreference;
+  final String? fullname;
+  final String? email;
+  final String? phoneNumber;
+  final String? profilePicture;
+  final String? companyName;
+
+  Owner({
+    required this.id,
+    this.privacyPreference,
+    this.fullname,
+    this.email,
+    this.phoneNumber,
+    this.profilePicture,
+    this.companyName,
+  });
+
+  factory Owner.fromJson(Map<String, dynamic> json) {
+    try {
+      return Owner(
+        id: json['id']?.toString() ?? '',
+        privacyPreference: json['privacy_preference']?.toString(),
+        fullname: json['fullname']?.toString(),
+        email: json['email']?.toString(),
+        phoneNumber: json['phone_number']?.toString(),
+        profilePicture: json['profile_picture']?.toString(),
+        companyName: json['company_name']?.toString(),
+      );
+    } catch (e) {
+      print('❌ Error parsing Owner: $e');
+      print('📄 Owner JSON: $json');
+      rethrow;
+    }
+  }
+
+  @override
+  String toString() {
+    return 'Owner(id: $id, fullname: $fullname, privacyPreference: $privacyPreference)';
+  }
+}
+
+class Reporter {
+  final String id;
+  final String? privacyPreference;
+  final String? fullname;
+  final String? email;
+  final String? phoneNumber;
+  final String? profilePicture;
+  final String? companyName;
+
+  Reporter({
+    required this.id,
+    this.privacyPreference,
+    this.fullname,
+    this.email,
+    this.phoneNumber,
+    this.profilePicture,
+    this.companyName,
+  });
+
+  factory Reporter.fromJson(Map<String, dynamic> json) {
+    try {
+      return Reporter(
+        id: json['id']?.toString() ?? '',
+        privacyPreference: json['privacy_preference']?.toString(),
+        fullname: json['fullname']?.toString(),
+        email: json['email']?.toString(),
+        phoneNumber: json['phone_number']?.toString(),
+        profilePicture: json['profile_picture']?.toString(),
+        companyName: json['company_name']?.toString(),
+      );
+    } catch (e) {
+      print('❌ Error parsing Reporter: $e');
+      print('📄 Reporter JSON: $json');
+      rethrow;
+    }
+  }
+
+  String get displayName {
+    if (fullname != null &&
+        fullname!.isNotEmpty &&
+        fullname != 'Anonymous User') {
+      return fullname!;
+    }
+    return 'Anonymous User';
+  }
+
+  @override
+  String toString() {
+    return 'Reporter(id: $id, fullname: $fullname, privacyPreference: $privacyPreference)';
+  }
+}
+
+class ReportImage {
+  final String id;
+  final Map<String, dynamic> image;
+
+  ReportImage({required this.id, required this.image});
+
+  factory ReportImage.fromJson(Map<String, dynamic> json) {
+    try {
+      return ReportImage(
+        id: json['id']?.toString() ?? '',
+        image: json['image'] as Map<String, dynamic>? ?? {},
+      );
+    } catch (e) {
+      print('❌ Error parsing ReportImage: $e');
+      print('📄 ReportImage JSON: $json');
+      rethrow;
+    }
+  }
+
+  // Helper getters for image URLs
+  String? get thumbnail => image['thumbnail']?.toString();
+  String? get medium => image['medium']?.toString();
+  String? get large => image['large']?.toString();
+  String? get original => image['original']?.toString();
+
+  // Get the best available image
+  String? get bestImage => large ?? medium ?? original ?? thumbnail;
+
+  @override
+  String toString() {
+    return 'ReportImage(id: $id, hasImage: ${image.isNotEmpty})';
+  }
+}
+
+class StatusLog {
+  final String id;
+  final String status;
+  final DateTime timestamp;
+
+  StatusLog({required this.id, required this.status, required this.timestamp});
+
+  factory StatusLog.fromJson(Map<String, dynamic> json) {
+    try {
+      return StatusLog(
+        id: json['id']?.toString() ?? '',
+        status: json['status']?.toString() ?? '',
+        timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      );
+    } catch (e) {
+      print('❌ Error parsing StatusLog: $e');
+      print('📄 StatusLog JSON: $json');
+      rethrow;
+    }
+  }
+
+  @override
+  String toString() {
+    return 'StatusLog(id: $id, status: $status, timestamp: $timestamp)';
   }
 }
